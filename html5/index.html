@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEURAL LINK: Drone Operator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="game-wrap">
+      <canvas id="game-canvas"></canvas>
+    </div>
+    <div id="sidebar">
+      <div class="hud-title">NEURAL LINK</div>
+      <div class="hud-sub">Drone Operator</div>
+
+      <div class="hud-section">
+        <div class="hud-label">MISSION TIMER</div>
+        <div id="timer-val" class="hud-value big-val">4:00</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">ALERT LEVEL</div>
+        <div class="bar-wrap">
+          <div class="bar-fill" id="alert-fill" style="width:0%"></div>
+        </div>
+        <div class="bar-pct" id="alert-pct">0%</div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">DETECTION</div>
+        <div class="bar-wrap">
+          <div class="bar-fill" id="detect-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">ENERGY</div>
+        <div class="bar-wrap energy">
+          <div class="bar-fill cyan" id="energy-fill" style="width:100%"></div>
+        </div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">COMPUTE BUFFER <span class="hint">(pause fuel)</span></div>
+        <div class="bar-wrap compute">
+          <div class="bar-fill blue" id="compute-fill" style="width:100%"></div>
+        </div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">OBJECTIVES</div>
+        <div id="objectives"></div>
+      </div>
+
+      <div class="hud-section">
+        <div class="hud-label">STATUS</div>
+        <div id="phase-status" class="hud-value">ACTIVE</div>
+      </div>
+
+      <div class="hud-section controls">
+        <div class="hud-label">CONTROLS</div>
+        <div class="ctrl-row"><kbd>LMB</kbd> Set waypoint</div>
+        <div class="ctrl-row"><kbd>E</kbd> Hack terminal</div>
+        <div class="ctrl-row"><kbd>Q</kbd> Toggle beacon mode</div>
+        <div class="ctrl-row"><kbd>S</kbd> Toggle stealth</div>
+        <div class="ctrl-row"><kbd>SPACE</kbd> Tactical pause</div>
+        <div class="ctrl-row"><kbd>F</kbd> Sonar ping</div>
+        <div class="ctrl-row"><kbd>R</kbd> Restart (after end)</div>
+      </div>
+
+      <div class="hud-section legend">
+        <div class="hud-label">LEGEND</div>
+        <div class="leg-row"><span class="leg-dot" style="color:#00e0ff">■</span> Your drone</div>
+        <div class="leg-row"><span class="leg-dot" style="color:#ff2040">■</span> Enemy camera</div>
+        <div class="leg-row"><span class="leg-dot" style="color:#00ff88">■</span> Terminal (E to hack)</div>
+        <div class="leg-row"><span class="leg-dot" style="color:#ffd700">■</span> Extraction zone</div>
+        <div class="leg-row"><span class="leg-dot" style="color:#9966ff">■</span> Beacon (Q mode)</div>
+      </div>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

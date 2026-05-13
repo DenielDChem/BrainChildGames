@@ -1,0 +1,19 @@
+# Godot 4
+godot/.godot/
+godot/*.import
+godot/export_presets.cfg
+godot/android/
+godot/.mono/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Build output
+*.apk
+*.aab
+*.ipa

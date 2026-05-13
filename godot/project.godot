@@ -1,0 +1,23 @@
+; Engine configuration file — Godot 4
+config_version=5
+
+[application]
+config/name="Neural Link"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.3", "Mobile")
+
+[autoload]
+Config="*res://scripts/config.gd"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="mobile"
+
+[input_devices]
+pointing/emulate_touch_from_mouse=true
