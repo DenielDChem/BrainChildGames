@@ -176,29 +176,33 @@ func _update(dt: float) -> void:
 	if int(_wave_time) % 25 == 0 and int(_wave_time) != int(_wave_time - dt) and _chests.size() < 8:
 		_spawn_chest()
 
-	# Weapons
-	var tgt = _nearest_enemy()
+	# Weapons — each fires only within its range
 	var fr: float = _p["fire_rate"]
 
 	if _p["weapons"].has("single"):
 		_p["single_clock"] -= dt
-		if _p["single_clock"] <= 0.0 and tgt:
-			_fire_single(tgt); _p["single_clock"] = _p["single_rate"] * fr
+		var tgt_pistol = _nearest_enemy_in_range(420.0)
+		if _p["single_clock"] <= 0.0 and tgt_pistol:
+			_fire_single(tgt_pistol); _p["single_clock"] = _p["single_rate"] * fr
 
 	if _p["weapons"].has("shotgun"):
 		_p["sg_clock"] -= dt
-		if _p["sg_clock"] <= 0.0 and tgt:
-			_fire_shotgun(tgt); _p["sg_clock"] = _p["sg_rate"] * fr
+		var tgt_sg = _nearest_enemy_in_range(200.0)
+		if _p["sg_clock"] <= 0.0 and tgt_sg:
+			_fire_shotgun(tgt_sg); _p["sg_clock"] = _p["sg_rate"] * fr
 
 	if _p["weapons"].has("lightning"):
 		_p["light_clock"] -= dt
-		if _p["light_clock"] <= 0.0 and tgt:
-			_fire_lightning(tgt); _p["light_clock"] = _p["light_rate"] * fr
+		var tgt_light = _nearest_enemy_in_range(300.0)
+		if _p["light_clock"] <= 0.0 and tgt_light:
+			_fire_lightning(tgt_light); _p["light_clock"] = _p["light_rate"] * fr
 
 	if _p["weapons"].has("nova"):
 		_p["nova_clock"] -= dt
 		if _p["nova_clock"] <= 0.0:
-			_fire_nova(); _p["nova_clock"] = _p["nova_rate"] * fr
+			if _nearest_enemy_in_range(_p["nova_radius"] * 1.3):
+				_fire_nova()
+			_p["nova_clock"] = _p["nova_rate"] * fr
 
 	if _p["weapons"].has("orbit"):
 		_p["orb_angle"] += dt * 1.6
@@ -516,6 +520,15 @@ func _nearest_enemy() -> Variant:
 		if d2 < bd: bd = d2; best = e
 	return best
 
+func _nearest_enemy_in_range(max_dist: float) -> Variant:
+	var best = null; var bd := INF
+	var md2 := max_dist * max_dist
+	for e in _enemies:
+		if e.get("dead", false): continue
+		var d2: float = (float(_p["x"]) - float(e["x"])) ** 2.0 + (float(_p["y"]) - float(e["y"])) ** 2.0
+		if d2 < md2 and d2 < bd: bd = d2; best = e
+	return best
+
 func _nearest_to(src: Dictionary, max_d: float) -> Variant:
 	var best = null; var bd := INF
 	for e in _enemies:
@@ -602,7 +615,6 @@ func _draw_bg() -> void:
 func _draw_player() -> void:
 	if _state == GS.OVER or _p.is_empty(): return
 	var sp := _s(_p["x"], _p["y"])
-	draw_circle(sp, 54.0, Config.C_PLAYER_AURA)
 	if _p.get("contact_flash", 0.0) > 0.0:
 		draw_circle(sp, 24.0, Color(1, 0.15, 0.1, 0.55))
 	# Blink only on hit iframes, not upgrade_grace
@@ -727,9 +739,10 @@ func _draw_hud() -> void:
 	draw_rect(Rect2(12, 12, 160.0 * hp_pct, 14), hp_col)
 	draw_string(_font, Vector2(12, 10), "HP  %.0f / %.0f" % [_p["hp"], _p["max_hp"]],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Config.C_HUD_TEXT)
-	# Timer / stats — top-right with explicit width so alignment works
+	# Timer / stats — top-right with semi-transparent backing panel
 	var rx := W - 8.0
 	var pw := 160.0
+	draw_rect(Rect2(rx - pw - 4.0, 6.0, pw + 8.0, 76.0), Color(0.0, 0.0, 0.0, 0.65))
 	var mins := int(_wave_time / 60.0); var secs := int(_wave_time) % 60
 	draw_string(_font, Vector2(rx - pw, 22), "%d:%02d" % [mins, secs],
 		HORIZONTAL_ALIGNMENT_RIGHT, pw, 16, Config.C_HUD_TITLE)
@@ -876,21 +889,21 @@ func _draw_overlay() -> void:
 				var bg := Color(0.12, 0.18, 0.38, 0.95)
 				draw_rect(Rect2(bx, card_y, card_w, card_h), bg)
 				draw_rect(Rect2(bx, card_y, card_w, card_h), Color(Config.C_HUD_TEXT, 0.38), false, 2.0)
-				# Number badge
+				# Number badge — pos.x=bx+6, width=22 → centered in badge rect
 				draw_rect(Rect2(bx + 6.0, card_y + 6.0, 22.0, 22.0), Color(0.3, 0.4, 0.7, 0.8))
-				draw_string(_font, Vector2(bx + 17.0, card_y + 22.0), str(i + 1),
-					HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color.WHITE)
+				draw_string(_font, Vector2(bx + 6.0, card_y + 22.0), str(i + 1),
+					HORIZONTAL_ALIGNMENT_CENTER, 22.0, 13, Color.WHITE)
 				# Icon centered in upper half
 				var icon_cx := bx + card_w * 0.5
-				var icon_cy := card_y + 80.0
+				var icon_cy := card_y + 82.0
 				draw_circle(Vector2(icon_cx, icon_cy), 38.0, Color(0.06, 0.1, 0.25, 0.9))
 				draw_arc(Vector2(icon_cx, icon_cy), 38.0, 0.0, TAU, 24, Color(Config.C_HUD_TEXT, 0.3), 1.5)
 				_draw_upgrade_icon(ch["id"], icon_cx, icon_cy)
-				# Name
-				draw_string(_font, Vector2(bx + card_w * 0.5, card_y + 140.0), ch["name"],
+				# Name — pos.x=bx+6 (left edge), width=card_w-12 → centered within card
+				draw_string(_font, Vector2(bx + 6.0, card_y + 143.0), ch["name"],
 					HORIZONTAL_ALIGNMENT_CENTER, card_w - 12.0, 15, Color.WHITE)
 				# Desc
-				draw_string(_font, Vector2(bx + card_w * 0.5, card_y + 163.0), ch["desc"],
+				draw_string(_font, Vector2(bx + 6.0, card_y + 166.0), ch["desc"],
 					HORIZONTAL_ALIGNMENT_CENTER, card_w - 12.0, 11, Color(Config.C_HUD_TEXT, 0.75))
 			draw_string(_font, Vector2(W * 0.5, card_y + card_h + 22.0),
 				"Клавиши  1 / 2 / 3  или  нажмите карточку",
