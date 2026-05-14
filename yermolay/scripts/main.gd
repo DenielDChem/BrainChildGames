@@ -158,8 +158,8 @@ func _update(dt: float) -> void:
 		_spawn_chest()
 
 	# Weapons (auto-aim)
-	var tgt := _nearest_enemy()
-	var fr  := _p["fire_rate"]
+	var tgt = _nearest_enemy()
+	var fr: float = _p["fire_rate"]
 
 	if _p["weapons"].has("single"):
 		_p["single_clock"] -= dt
@@ -184,7 +184,7 @@ func _update(dt: float) -> void:
 	if _p["weapons"].has("orbit"):
 		_p["orb_angle"] += dt * 1.6
 		for oi in _p["orb_count"]:
-			var ag := _p["orb_angle"] + oi * (TAU / _p["orb_count"])
+			var ag: float = float(_p["orb_angle"]) + oi * (TAU / float(_p["orb_count"]))
 			var orb := {"x": _p["x"] + cos(ag) * _p["orb_radius"],
 						"y": _p["y"] + sin(ag) * _p["orb_radius"], "r": 11.0}
 			for e in _enemies:
@@ -240,7 +240,7 @@ func _update_enemy(e: Dictionary, dt: float) -> void:
 	e["hit_flash"] = maxf(0.0, e["hit_flash"] - dt)
 
 	if not e.get("dashing", false):
-		var dx := _p["x"] - e["x"]; var dy := _p["y"] - e["y"]
+		var dx: float = float(_p["x"]) - float(e["x"]); var dy: float = float(_p["y"]) - float(e["y"])
 		var len := sqrt(dx * dx + dy * dy)
 		if len > 1.0:
 			e["x"] += dx / len * e["speed"] * dt
@@ -252,7 +252,7 @@ func _update_enemy(e: Dictionary, dt: float) -> void:
 	if e["shoot_rate"] > 0.0 and not e.get("is_aiming", false):
 		e["shoot_clock"] = e.get("shoot_clock", e["shoot_rate"]) - dt
 		if e["shoot_clock"] <= 0.0:
-			var enraged := e["is_boss"] and e["hp"] / e["max_hp"] < 0.4
+			var enraged: bool = bool(e["is_boss"]) and float(e["hp"]) / float(e["max_hp"]) < 0.4
 			var ang := atan2(_p["y"] - e["y"], _p["x"] - e["x"])
 			var shots := 3 if (e["is_boss"] and enraged) else (2 if (not e["is_boss"] and e["hp"] / e["max_hp"] < 0.4) else 1)
 			for s in shots:
@@ -329,7 +329,7 @@ func _fire_single(t: Dictionary) -> void:
 func _fire_shotgun(t: Dictionary) -> void:
 	var ang := atan2(t["y"] - _p["y"], t["x"] - _p["x"])
 	for s in _p["sg_count"]:
-		var da := (s - (_p["sg_count"] - 1) * 0.5) * 0.18
+		var da: float = (s - (float(_p["sg_count"]) - 1.0) * 0.5) * 0.18
 		_bullets.append({"x": _p["x"], "y": _p["y"],
 			"vx": cos(ang + da) * 420.0, "vy": sin(ang + da) * 420.0,
 			"r": 5.0, "life": 1.2, "dmg": _p["bullet_dmg"] * 10.0 * _p["sg_dmg"],
@@ -337,7 +337,7 @@ func _fire_shotgun(t: Dictionary) -> void:
 
 func _fire_lightning(t: Dictionary) -> void:
 	var cur := t
-	var sx := _p["x"]; var sy := _p["y"]
+	var sx: float = _p["x"]; var sy: float = _p["y"]
 	for _k in _p["light_chain"]:
 		cur["hp"] -= _p["bullet_dmg"] * 25.0
 		cur["hit_flash"] = 0.15
@@ -345,7 +345,7 @@ func _fire_lightning(t: Dictionary) -> void:
 		_emit_particles(cur["x"], cur["y"], Config.C_LIGHTNING, 6, 100.0)
 		if cur["hp"] <= 0.0: _kill_enemy(cur); break
 		sx = cur["x"]; sy = cur["y"]
-		var nxt := _nearest_to(cur, 160.0)
+		var nxt = _nearest_to(cur, 160.0)
 		if not nxt: break
 		cur = nxt
 
@@ -424,7 +424,7 @@ func _nearest_enemy() -> Variant:
 	var best = null; var bd := INF
 	for e in _enemies:
 		if e.get("dead", false): continue
-		var d2 := (_p["x"] - e["x"]) ** 2 + (_p["y"] - e["y"]) ** 2
+		var d2: float = (float(_p["x"]) - float(e["x"])) ** 2.0 + (float(_p["y"]) - float(e["y"])) ** 2.0
 		if d2 < bd: bd = d2; best = e
 	return best
 
@@ -437,8 +437,8 @@ func _nearest_to(src: Dictionary, max_d: float) -> Variant:
 	return best
 
 func _hits(a: Dictionary, b: Dictionary) -> bool:
-	var dx := a["x"] - b["x"]; var dy := a["y"] - b["y"]
-	var sr := a["r"] + b["r"]
+	var dx: float = float(a["x"]) - float(b["x"]); var dy: float = float(a["y"]) - float(b["y"])
+	var sr: float = float(a["r"]) + float(b["r"])
 	return dx * dx + dy * dy < sr * sr
 
 func _emit_particles(x: float, y: float, col: Color, n: int, spd: float = 120.0) -> void:
@@ -513,8 +513,8 @@ func _draw_orbs() -> void:
 	if _p.is_empty() or not _p["weapons"].has("orbit"): return
 	var sp := _s(_p["x"], _p["y"])
 	for oi in _p["orb_count"]:
-		var ag := _p["orb_angle"] + oi * (TAU / _p["orb_count"])
-		var op := sp + Vector2(cos(ag), sin(ag)) * _p["orb_radius"]
+		var ag: float = float(_p["orb_angle"]) + oi * (TAU / float(_p["orb_count"]))
+		var op: Vector2 = sp + Vector2(cos(ag), sin(ag)) * float(_p["orb_radius"])
 		draw_circle(op, 11.0, Config.C_ORB)
 		draw_circle(op, 5.5,  Config.C_ORB_CORE)
 
@@ -524,9 +524,9 @@ func _draw_enemies() -> void:
 		if e.get("dead", false): continue
 		var sp := _s(e["x"], e["y"])
 		if sp.x < -300 or sp.x > W + 300 or sp.y < -300 or sp.y > H + 300: continue
-		var fl    := e["hit_flash"] > 0.0
-		var base  := Color.WHITE if fl else Config.ENEMY_BASE.get(e["type"],  Color(0.15, 0.15, 0.15))
-		var accent := Color.WHITE if fl else Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5))
+		var fl: bool = float(e["hit_flash"]) > 0.0
+		var base: Color = Color.WHITE if fl else (Config.ENEMY_BASE.get(e["type"], Color(0.15, 0.15, 0.15)) as Color)
+		var accent: Color = Color.WHITE if fl else (Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5)) as Color)
 		draw_circle(sp, e["r"], base)
 		draw_arc(sp, e["r"], 0.0, TAU, 24, accent, 2.0 if e["is_boss"] else 1.5)
 		if e["is_boss"]:
@@ -538,8 +538,8 @@ func _draw_enemies() -> void:
 				draw_line(sp, asp, a_col, 2.0)
 				draw_arc(asp, 18.0, 0.0, TAU, 16, Color(1, 0, 0, 0.7), 2.0)
 		if e["is_boss"] or e["hp"] < e["max_hp"]:
-			var bw := (e["r"] + 2.0) * 2.0
-			var bx := sp.x - bw * 0.5; var by := sp.y + e["r"] + 6.0
+			var bw: float = (float(e["r"]) + 2.0) * 2.0
+			var bx: float = sp.x - bw * 0.5; var by: float = sp.y + float(e["r"]) + 6.0
 			draw_rect(Rect2(bx, by, bw, 6), Color(0.08, 0.08, 0.08, 0.9))
 			draw_rect(Rect2(bx, by, bw * (e["hp"] / e["max_hp"]), 6),
 				Config.C_BOSS_BAR if e["is_boss"] else Color(0.27, 0.47, 1.0))
@@ -586,7 +586,7 @@ func _draw_emit_particles() -> void:
 func _draw_hud() -> void:
 	if _state != GS.PLAY or _p.is_empty(): return
 	# HP bar
-	var hp_pct := _p["hp"] / _p["max_hp"]
+	var hp_pct: float = float(_p["hp"]) / float(_p["max_hp"])
 	var hp_col := Config.C_HUD_BAD if hp_pct < 0.3 else (Config.C_HUD_WARN if hp_pct < 0.6 else Config.C_HUD_GOOD)
 	draw_rect(Rect2(12, 12, 160, 14), Color(0.08, 0.08, 0.08, 0.85))
 	draw_rect(Rect2(12, 12, 160.0 * hp_pct, 14), hp_col)
