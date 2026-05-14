@@ -606,7 +606,7 @@ func _draw_player() -> void:
 		draw_circle(sp, 24.0, Color(1, 0.15, 0.1, 0.55))
 	if _p["iframes"] > 0.0 and int(_p["iframes"] * 8) % 2 == 1:
 		return
-	var sz := _p["r"] * 3.2
+	var sz: float = float(_p["r"]) * 3.2
 	if _tex.has("player"):
 		var flash_mod := Color(2.5, 2.5, 2.5, 1.0) if _p.get("contact_flash", 0.0) > 0.0 else Color.WHITE
 		draw_texture_rect(_tex["player"], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false, flash_mod)
@@ -631,13 +631,13 @@ func _draw_enemies() -> void:
 		if sp.x < -300 or sp.x > W + 300 or sp.y < -300 or sp.y > H + 300: continue
 		var fl: bool = float(e["hit_flash"]) > 0.0
 		var img_key: String = _ENEMY_IMG.get(e["type"], "")
+		var accent: Color = Color.WHITE if fl else (Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5)) as Color)
 		if img_key != "" and _tex.has(img_key):
-			var sz := float(e["r"]) * 2.8
+			var sz: float = float(e["r"]) * 2.8
 			var mod := Color(3.0, 3.0, 3.0, 1.0) if fl else Color.WHITE
 			draw_texture_rect(_tex[img_key], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false, mod)
 		else:
 			var base: Color = Color.WHITE if fl else (Config.ENEMY_BASE.get(e["type"], Color(0.15, 0.15, 0.15)) as Color)
-			var accent: Color = Color.WHITE if fl else (Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5)) as Color)
 			draw_circle(sp, e["r"], base)
 			draw_arc(sp, e["r"], 0.0, TAU, 24, accent, 2.0 if e["is_boss"] else 1.5)
 		if e["is_boss"]:
@@ -659,7 +659,7 @@ func _draw_bullets() -> void:
 	for b in _bullets:
 		var sp := _s(b["x"], b["y"])
 		if _tex.has("bullet"):
-			var sz := b["r"] * 3.2
+			var sz: float = float(b["r"]) * 3.2
 			draw_texture_rect(_tex["bullet"], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false)
 		else:
 			draw_circle(sp, b["r"], Config.C_BULLET)
