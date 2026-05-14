@@ -11,12 +11,17 @@ var swarm_nodes: Array[Dictionary] = []
 var secret_opened: bool = false
 var portal_phase: float = 0.0
 
+var _platform_bodies: Array = []
+
 signal portal_entered(to_level: int)
 
 func _ready() -> void:
 	_build_level(GameState.current_level)
 
 func _build_level(lvl: int) -> void:
+	for body in _platform_bodies:
+		body.queue_free()
+	_platform_bodies.clear()
 	platforms.clear(); orbs.clear(); records.clear()
 	animals.clear(); hazards.clear(); portals.clear(); swarm_nodes.clear()
 	secret_opened = false
@@ -24,6 +29,21 @@ func _build_level(lvl: int) -> void:
 		0: _build_walk()
 		1: _build_jump()
 		2: _build_flight()
+	for p in platforms:
+		if not (p["secret"] and not p["open"]):
+			_create_platform_body(p)
+
+func _create_platform_body(p: Dictionary) -> void:
+	var body := StaticBody2D.new()
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(float(p["w"]), float(p["h"]))
+	shape.shape = rect
+	shape.position = Vector2(float(p["w"]) * 0.5, float(p["h"]) * 0.5)
+	body.add_child(shape)
+	body.position = Vector2(float(p["x"]), float(p["y"]))
+	add_child(body)
+	_platform_bodies.append(body)
 
 func _build_walk() -> void:
 	_plat(-200, 750, 760, 200, "ground")
@@ -128,8 +148,9 @@ func _swarm(x: float, y: float, r: float, danger: float) -> void:
 func open_secret_platforms() -> void:
 	secret_opened = true
 	for p in platforms:
-		if p["secret"]:
+		if p["secret"] and not p["open"]:
 			p["open"] = true
+			_create_platform_body(p)
 
 func visible_platforms() -> Array[Dictionary]:
 	var result: Array[Dictionary] = []

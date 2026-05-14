@@ -71,7 +71,7 @@ func _on_portal_entered(to_level: int) -> void:
 func _on_center_changed(value: float) -> void:
 	if value <= 0.0:
 		player.respawn()
-		GameState.heal_center(20.0)
+		GameState.heal_center(36.0)
 
 func _on_record_found(title: String, text: String) -> void:
 	hud.show_message("%s. %s" % [title, text], 4.2)

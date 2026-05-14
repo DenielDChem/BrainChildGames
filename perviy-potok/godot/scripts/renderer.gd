@@ -71,9 +71,47 @@ func _draw_records() -> void:
 func _draw_animals() -> void:
 	for a in level_mgr.animals:
 		if a["met"]: continue
-		var pos := Vector2(a["x"], a["y"])
-		draw_circle(pos, 14.0, Color(Config.C_COPPER.r, Config.C_COPPER.g, Config.C_COPPER.b, 0.55))
-		draw_arc(pos, 16.0 + 2.0 * sin(_time * 1.8), 0.0, TAU, 24, Color(Config.C_COPPER.r, Config.C_COPPER.g, Config.C_COPPER.b, 0.22), 1.0)
+		var p := 0.5 + 0.5 * sin(_time * 2.0 + float(a["x"]) * 0.01)
+		var s := 0.95 + p * 0.04
+		var pos := Vector2(float(a["x"]) + 24.0, float(a["y"]) + 24.0)
+		_draw_animal_shape(a["kind"], pos, s)
+
+func _draw_animal_shape(kind: String, pos: Vector2, s: float) -> void:
+	var fill := Color(Config.C_COPPER.r, Config.C_COPPER.g, Config.C_COPPER.b, 0.16)
+	var stroke := Color(Config.C_INK.r, Config.C_INK.g, Config.C_INK.b, 0.82)
+	var pts: PackedVector2Array
+	var detail: PackedVector2Array
+
+	match kind:
+		"fox":
+			pts = _scaled_pts([Vector2(-34,20),Vector2(-14,-18),Vector2(0,-36),Vector2(14,-18),Vector2(34,20),Vector2(12,10),Vector2(0,34),Vector2(-12,10)], pos, s)
+			detail = _scaled_pts([Vector2(-16,2),Vector2(0,12),Vector2(16,2)], pos, s)
+		"raven":
+			pts = _scaled_pts([Vector2(-42,6),Vector2(-12,-18),Vector2(2,-8),Vector2(24,-38),Vector2(48,-30),Vector2(28,-4),Vector2(42,10),Vector2(8,12),Vector2(-18,24),Vector2(-8,10)], pos, s)
+			detail = _scaled_pts([Vector2(2,-8),Vector2(20,10),Vector2(-8,10)], pos, s)
+		"bear":
+			pts = _scaled_pts([Vector2(-30,24),Vector2(-30,-2),Vector2(-18,-26),Vector2(-6,-14),Vector2(0,-34),Vector2(6,-14),Vector2(18,-26),Vector2(30,-2),Vector2(30,24),Vector2(10,34),Vector2(-10,34)], pos, s)
+			detail = _scaled_pts([Vector2(-10,8),Vector2(0,16),Vector2(10,8)], pos, s)
+		"wolf":
+			pts = _scaled_pts([Vector2(-36,24),Vector2(-12,-30),Vector2(8,-8),Vector2(30,-34),Vector2(36,24),Vector2(14,12),Vector2(0,34),Vector2(-14,12)], pos, s)
+			detail = _scaled_pts([Vector2(-28,30),Vector2(0,4),Vector2(28,30)], pos, s)
+		"cat":
+			pts = _scaled_pts([Vector2(-28,28),Vector2(-32,-2),Vector2(-16,-34),Vector2(0,-12),Vector2(16,-34),Vector2(32,-2),Vector2(28,28)], pos, s)
+			detail = _scaled_pts([Vector2(-10,10),Vector2(0,18),Vector2(10,10)], pos, s)
+
+	if pts.size() > 0:
+		draw_colored_polygon(pts, fill)
+		var outline := PackedVector2Array(pts)
+		outline.append(pts[0])
+		draw_polyline(outline, stroke, 2.5, true)
+		if detail.size() > 0:
+			draw_polyline(detail, stroke, 2.0, true)
+
+func _scaled_pts(offsets: Array, origin: Vector2, s: float) -> PackedVector2Array:
+	var result := PackedVector2Array()
+	for v: Vector2 in offsets:
+		result.append(origin + v * s)
+	return result
 
 func _draw_portals() -> void:
 	for po in level_mgr.portals:
@@ -86,13 +124,40 @@ func _draw_portals() -> void:
 func _draw_player() -> void:
 	var px := player.position.x + 16.0
 	var py := player.position.y + 24.0
-	draw_arc(Vector2(px, py), 14.0, 0.0, TAU, 24, Color(Config.C_INK.r, Config.C_INK.g, Config.C_INK.b, 0.88), 2.0)
-	var shield: bool = (player.get("bear_shield_timer") as float) > 0.0
-	var glow_val: float = player.get("glow") as float
-	if shield or GameState.mode == "flight" or glow_val > 0.05:
+	var f := float(player.facing)
+	var shield: bool = float(player.get("bear_shield_timer")) > 0.0
+	var glow_val: float = float(player.get("glow"))
+	var mode := GameState.mode
+
+	# Aura / shield ellipse
+	if shield or mode == "flight" or glow_val > 0.05:
 		var sa := 0.48 if shield else (0.15 + glow_val * 0.32)
-		draw_arc(Vector2(px, py), 22.0 + glow_val * 8.0, 0.0, TAU, 32, Color(Config.C_BLUE.r, Config.C_BLUE.g, Config.C_BLUE.b, sa), 2.0)
-	if GameState.mode == "flight":
+		var sw := 3.0 if shield else 2.0
+		var er := 44.0 + glow_val * 18.0
+		draw_arc(Vector2(px, py), er, 0.0, TAU, 36, Color(Config.C_BLUE.r, Config.C_BLUE.g, Config.C_BLUE.b, sa), sw)
+
+	# Wings in flight mode
+	if mode == "flight":
 		var wa := 0.38 + glow_val * 0.2
-		draw_line(Vector2(px - 12, py - 7), Vector2(px - 46, py - 22), Color(Config.C_BLUE.r, Config.C_BLUE.g, Config.C_BLUE.b, wa), 1.5)
-		draw_line(Vector2(px + 12, py - 7), Vector2(px + 46, py - 22), Color(Config.C_BLUE.r, Config.C_BLUE.g, Config.C_BLUE.b, wa), 1.5)
+		var wc := Color(Config.C_BLUE.r, Config.C_BLUE.g, Config.C_BLUE.b, wa)
+		draw_polyline(PackedVector2Array([Vector2(px - 25*f, py - 14), Vector2(px - 78*f, py - 46), Vector2(px - 94*f, py - 92)]), wc, 1.5, true)
+		draw_polyline(PackedVector2Array([Vector2(px + 25*f, py - 14), Vector2(px + 78*f, py - 46), Vector2(px + 94*f, py - 92)]), wc, 1.5, true)
+
+	# Body polygon (torso + legs)
+	var body_col := Config.C_BLUE if mode == "jump" else (Config.C_DANGER if mode == "flight" else Config.C_COPPER)
+	var body_alpha := 0.44 if mode == "jump" else (0.44 if mode == "flight" else 0.48)
+	var body_pts := PackedVector2Array([
+		Vector2(px + (-14)*f, py - 10), Vector2(px + 14*f, py - 10),
+		Vector2(px + 20*f, py + 34), Vector2(px + 8*f, py + 38),
+		Vector2(px, py + 8),
+		Vector2(px + (-8)*f, py + 38), Vector2(px + (-20)*f, py + 34),
+	])
+	draw_colored_polygon(body_pts, Color(body_col.r, body_col.g, body_col.b, body_alpha))
+
+	# Arms
+	var arm_col := Color(Config.C_INK.r, Config.C_INK.g, Config.C_INK.b, 0.34)
+	draw_line(Vector2(px + (-14)*f, py + 2), Vector2(px + (-30)*f, py + 20), arm_col, 2.0)
+	draw_line(Vector2(px + 14*f, py + 2), Vector2(px + 30*f, py + 20), arm_col, 2.0)
+
+	# Head
+	draw_circle(Vector2(px, py - 27.0), 14.0, Color(Config.C_INK.r, Config.C_INK.g, Config.C_INK.b, 0.84))
