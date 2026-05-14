@@ -27,6 +27,9 @@ var _upgrade_selected: int   = 0
 
 const W: int = 1100
 const H: int = 720
+const PANEL_W: float = 164.0
+var _vp := Vector2(W, H)
+var _menu_btn := Rect2()
 var _font: Font
 
 var _tex := {}
@@ -47,6 +50,7 @@ var _joy_tid    := -1
 # ── Init ──────────────────────────────────────────────────────
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
+	_vp = get_viewport().get_visible_rect().size
 	_load_textures()
 	_state = GS.START
 
@@ -552,7 +556,7 @@ func _show_msg(title: String, sub: String = "") -> void:
 	_phase_lbl = title; _phase_sub = sub; _phase_timer = 3.0
 
 func _s(wx: float, wy: float) -> Vector2:
-	return Vector2(wx - _p["x"] + W * 0.5, wy - _p["y"] + H * 0.5)
+	return Vector2(wx - _p["x"] + (_vp.x - PANEL_W) * 0.5, wy - _p["y"] + _vp.y * 0.5)
 
 # ── Draw ──────────────────────────────────────────────────────
 func _draw() -> void:
@@ -569,47 +573,50 @@ func _draw() -> void:
 	_draw_player()
 	_draw_hud()
 	if _state == GS.PLAY:
+		_draw_right_panel()
 		_draw_joystick()
 	if _state != GS.PLAY:
 		_draw_overlay()
 
 func _draw_joystick() -> void:
 	if _joy_tid == -1:
-		var ghost := Vector2(110.0, H - 110.0)
-		draw_arc(ghost, JOY_R, 0.0, TAU, 32, Color(1, 1, 1, 0.10), 2.0)
-		draw_circle(ghost, 20.0, Color(1, 1, 1, 0.07))
+		var ghost := Vector2(100.0, _vp.y - 100.0)
+		draw_circle(ghost, JOY_R + 6.0, Color(0.0, 0.0, 0.0, 0.40))
+		draw_arc(ghost, JOY_R, 0.0, TAU, 32, Color(1, 1, 1, 0.45), 2.5)
+		draw_circle(ghost, 22.0, Color(1, 1, 1, 0.28))
 		return
-	draw_arc(_joy_origin, JOY_R, 0.0, TAU, 32, Color(1, 1, 1, 0.22), 2.0)
+	draw_circle(_joy_origin, JOY_R + 6.0, Color(0.0, 0.0, 0.0, 0.35))
+	draw_arc(_joy_origin, JOY_R, 0.0, TAU, 32, Color(1, 1, 1, 0.60), 2.5)
 	var knob := _joy_origin + (_joy_cur - _joy_origin).limit_length(JOY_R)
-	draw_circle(_joy_origin, 6.0, Color(1, 1, 1, 0.18))
-	draw_circle(knob, 26.0, Color(1, 1, 1, 0.32))
+	draw_circle(_joy_origin, 8.0, Color(1, 1, 1, 0.30))
+	draw_circle(knob, 28.0, Color(1, 1, 1, 0.60))
 
 func _draw_bg() -> void:
 	if _tex.has("bg_tile"):
 		var TW := 1024.0
 		var cam_x: float = _p.get("x", 0.0)
 		var cam_y: float = _p.get("y", 0.0)
-		var tx0 := int(floor((cam_x - W * 0.5) / TW))
-		var ty0 := int(floor((cam_y - H * 0.5) / TW))
-		var tx1 := int(ceil((cam_x + W * 0.5) / TW))
-		var ty1 := int(ceil((cam_y + H * 0.5) / TW))
+		var tx0 := int(floor((cam_x - _vp.x * 0.5) / TW))
+		var ty0 := int(floor((cam_y - _vp.y * 0.5) / TW))
+		var tx1 := int(ceil((cam_x + _vp.x * 0.5) / TW))
+		var ty1 := int(ceil((cam_y + _vp.y * 0.5) / TW))
 		for tx in range(tx0, tx1 + 1):
 			for ty in range(ty0, ty1 + 1):
-				var sx := tx * TW - cam_x + W * 0.5
-				var sy := ty * TW - cam_y + H * 0.5
+				var sx := tx * TW - cam_x + _vp.x * 0.5
+				var sy := ty * TW - cam_y + _vp.y * 0.5
 				draw_texture_rect(_tex["bg_tile"], Rect2(sx, sy, TW, TW), false)
 	else:
-		draw_rect(Rect2(0, 0, W, H), Config.C_BG)
+		draw_rect(Rect2(0, 0, _vp.x, _vp.y), Config.C_BG)
 		var gs := 80.0
 		var ox := fmod(-_p.get("x", 0.0), gs); if ox < 0.0: ox += gs
 		var oy := fmod(-_p.get("y", 0.0), gs); if oy < 0.0: oy += gs
 		var x := ox - gs
-		while x < W + gs:
-			draw_line(Vector2(x, 0), Vector2(x, H), Config.C_GRID, 1.0)
+		while x < _vp.x + gs:
+			draw_line(Vector2(x, 0), Vector2(x, _vp.y), Config.C_GRID, 1.0)
 			x += gs
 		var y := oy - gs
-		while y < H + gs:
-			draw_line(Vector2(0, y), Vector2(W, y), Config.C_GRID, 1.0)
+		while y < _vp.y + gs:
+			draw_line(Vector2(0, y), Vector2(_vp.x, y), Config.C_GRID, 1.0)
 			y += gs
 
 func _draw_player() -> void:
@@ -642,7 +649,7 @@ func _draw_enemies() -> void:
 	for e in _enemies:
 		if e.get("dead", false): continue
 		var sp := _s(e["x"], e["y"])
-		if sp.x < -300 or sp.x > W + 300 or sp.y < -300 or sp.y > H + 300: continue
+		if sp.x < -300 or sp.x > _vp.x + 300 or sp.y < -300 or sp.y > _vp.y + 300: continue
 		var fl: bool = float(e["hit_flash"]) > 0.0
 		var img_key: String = _ENEMY_IMG.get(e["type"], "")
 		var accent: Color = Color.WHITE if fl else (Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5)) as Color)
@@ -727,48 +734,78 @@ func _draw_wrecks() -> void:
 func _draw_emit_particles() -> void:
 	for pt in _particles:
 		var sp := _s(pt["x"], pt["y"])
-		if sp.x < -60 or sp.x > W + 60 or sp.y < -60 or sp.y > H + 60: continue
+		if sp.x < -60 or sp.x > _vp.x + 60 or sp.y < -60 or sp.y > _vp.y + 60: continue
 		draw_circle(sp, pt["r"], Color(pt["color"].r, pt["color"].g, pt["color"].b, pt["life"] / pt["max_life"]))
 
 func _draw_hud() -> void:
 	if _state != GS.PLAY or _p.is_empty(): return
-	# HP bar — top-left
-	var hp_pct: float = float(_p["hp"]) / float(_p["max_hp"])
-	var hp_col := Config.C_HUD_BAD if hp_pct < 0.3 else (Config.C_HUD_WARN if hp_pct < 0.6 else Config.C_HUD_GOOD)
-	draw_rect(Rect2(12, 12, 160, 14), Color(0.08, 0.08, 0.08, 0.85))
-	draw_rect(Rect2(12, 12, 160.0 * hp_pct, 14), hp_col)
-	draw_string(_font, Vector2(12, 10), "HP  %.0f / %.0f" % [_p["hp"], _p["max_hp"]],
-		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Config.C_HUD_TEXT)
-	# Timer / stats — top-right with semi-transparent backing panel
-	var rx := W - 8.0
-	var pw := 160.0
-	draw_rect(Rect2(rx - pw - 4.0, 6.0, pw + 8.0, 76.0), Color(0.0, 0.0, 0.0, 0.65))
-	var mins := int(_wave_time / 60.0); var secs := int(_wave_time) % 60
-	draw_string(_font, Vector2(rx - pw, 22), "%d:%02d" % [mins, secs],
-		HORIZONTAL_ALIGNMENT_RIGHT, pw, 16, Config.C_HUD_TITLE)
-	draw_string(_font, Vector2(rx - pw, 40), "%d pts" % _p["score"],
-		HORIZONTAL_ALIGNMENT_RIGHT, pw, 12, Config.C_HUD_TEXT)
-	draw_string(_font, Vector2(rx - pw, 57), "Убито: %d   Ур.%d" % [_p["kills"], _p["level"]],
-		HORIZONTAL_ALIGNMENT_RIGHT, pw, 11, Config.C_HUD_TEXT)
-	var kills_left: int = _p["next_level_kills"] - _p["kills"]
-	draw_string(_font, Vector2(rx - pw, 72), "До ур.: %d" % kills_left,
-		HORIZONTAL_ALIGNMENT_RIGHT, pw, 10, Color(Config.C_HUD_TEXT, 0.5))
-	# Boss bar — top-center
+	var play_cx := (_vp.x - PANEL_W) * 0.5
+	# Boss bar — top-center of play area
 	if _active_boss and not _active_boss.get("dead", false):
-		var bw := 400.0; var bx := (W - bw) * 0.5; var by := 12.0
+		var bw := 400.0; var bx := play_cx - bw * 0.5; var by := 12.0
 		draw_rect(Rect2(bx, by, bw, 16), Color(0.08, 0.08, 0.08, 0.85))
 		draw_rect(Rect2(bx, by, bw * (_active_boss["hp"] / _active_boss["max_hp"]), 16), Config.C_BOSS_BAR)
-		draw_string(_font, Vector2(W * 0.5, by - 2.0),
+		draw_string(_font, Vector2(play_cx, by - 2.0),
 			Config.ECFG[_active_boss["type"]].get("boss_name", "БОСС"),
 			HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(1, 0.6, 0.3))
-	# Notifications — bottom-center, away from player
+	# Notification — bottom-center of play area, dark backing for contrast
 	if _phase_timer > 0.0:
 		var a := minf(1.0, _phase_timer)
-		draw_string(_font, Vector2(W * 0.5, H - 72.0), _phase_lbl,
+		var ny := _vp.y - 84.0
+		var lw := 340.0; var lh := 60.0
+		draw_rect(Rect2(play_cx - lw * 0.5 - 12.0, ny - 28.0, lw + 24.0, lh),
+			Color(0.0, 0.0, 0.0, 0.70 * a))
+		draw_string(_font, Vector2(play_cx, ny), _phase_lbl,
 			HORIZONTAL_ALIGNMENT_CENTER, -1, 24, Color(Config.C_CHEST, a))
 		if _phase_sub.length() > 0:
-			draw_string(_font, Vector2(W * 0.5, H - 44.0), _phase_sub,
+			draw_string(_font, Vector2(play_cx, ny + 28.0), _phase_sub,
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color(Config.C_HUD_TEXT, a * 0.8))
+
+func _draw_right_panel() -> void:
+	if _p.is_empty(): return
+	var px := _vp.x - PANEL_W
+	var rw := PANEL_W - 20.0
+	var pad := px + 10.0
+	draw_rect(Rect2(px, 0, PANEL_W, _vp.y), Color(0.04, 0.04, 0.10, 0.82))
+	draw_line(Vector2(px, 0), Vector2(px, _vp.y), Color(1, 1, 1, 0.14), 1.5)
+	# Menu button
+	_menu_btn = Rect2(px + 6, 8, PANEL_W - 12, 36)
+	draw_rect(_menu_btn, Color(0.18, 0.22, 0.48, 0.95))
+	draw_rect(_menu_btn, Color(1, 1, 1, 0.30), false, 1.5)
+	draw_string(_font, Vector2(px + PANEL_W * 0.5, 32.0), "МЕНЮ",
+		HORIZONTAL_ALIGNMENT_CENTER, PANEL_W - 12, 13, Color.WHITE)
+	draw_line(Vector2(px + 8, 52), Vector2(_vp.x - 8, 52), Color(1, 1, 1, 0.14), 1.0)
+	# HP section
+	var y := 64.0
+	draw_string(_font, Vector2(pad, y + 11), "HP", HORIZONTAL_ALIGNMENT_LEFT, rw, 11, Config.C_HUD_TEXT)
+	y += 16.0
+	var hp_pct: float = float(_p["hp"]) / float(_p["max_hp"])
+	var hp_col := Config.C_HUD_BAD if hp_pct < 0.3 else (Config.C_HUD_WARN if hp_pct < 0.6 else Config.C_HUD_GOOD)
+	draw_rect(Rect2(pad, y, rw, 10), Color(0.08, 0.08, 0.08, 0.85))
+	draw_rect(Rect2(pad, y, rw * hp_pct, 10), hp_col)
+	y += 14.0
+	draw_string(_font, Vector2(pad, y + 10), "%.0f / %.0f" % [_p["hp"], _p["max_hp"]],
+		HORIZONTAL_ALIGNMENT_LEFT, rw, 10, Color(Config.C_HUD_TEXT, 0.75))
+	y += 18.0
+	draw_line(Vector2(px + 8, y), Vector2(_vp.x - 8, y), Color(1, 1, 1, 0.14), 1.0)
+	y += 12.0
+	# Stats
+	var mins := int(_wave_time / 60.0); var secs := int(_wave_time) % 60
+	draw_string(_font, Vector2(pad, y + 15), "%d:%02d" % [mins, secs],
+		HORIZONTAL_ALIGNMENT_LEFT, rw, 17, Config.C_HUD_TITLE)
+	y += 22.0
+	draw_string(_font, Vector2(pad, y + 12), "%d pts" % _p["score"],
+		HORIZONTAL_ALIGNMENT_LEFT, rw, 12, Config.C_HUD_TEXT)
+	y += 18.0
+	draw_string(_font, Vector2(pad, y + 11), "Уровень %d" % _p["level"],
+		HORIZONTAL_ALIGNMENT_LEFT, rw, 11, Config.C_HUD_TEXT)
+	y += 16.0
+	draw_string(_font, Vector2(pad, y + 10), "До ур.: %d" % (_p["next_level_kills"] - _p["kills"]),
+		HORIZONTAL_ALIGNMENT_LEFT, rw, 10, Color(Config.C_HUD_TEXT, 0.55))
+	y += 14.0
+	var prog := clampf(float(_p["kills"]) / float(_p["next_level_kills"]), 0.0, 1.0)
+	draw_rect(Rect2(pad, y, rw, 6), Color(0.08, 0.08, 0.08, 0.85))
+	draw_rect(Rect2(pad, y, rw * prog, 6), Config.C_HUD_TITLE)
 
 func _draw_upgrade_icon(id: String, cx: float, cy: float) -> void:
 	var sz := 26.0
@@ -858,81 +895,77 @@ func _draw_upgrade_icon(id: String, cx: float, cy: float) -> void:
 				draw_circle(Vector2(cx - sz * 0.3 + i * sz * 0.28, cy), sz * 0.08, Color(Config.C_BULLET, 0.45))
 
 func _draw_overlay() -> void:
-	draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.75))
+	draw_rect(Rect2(0, 0, _vp.x, _vp.y), Color(0, 0, 0, 0.75))
+	var cx := _vp.x * 0.5; var cy := _vp.y * 0.5
 	match _state:
 		GS.START:
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0),
+			draw_string(_font, Vector2(cx, cy - 40.0),
 				"ЕРМОЛАЙ: ЗРЯЧИЙ СЛЕПЕЦ", HORIZONTAL_ALIGNMENT_CENTER, -1, 30, Config.C_HUD_TITLE)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 10.0),
+			draw_string(_font, Vector2(cx, cy + 10.0),
 				"WASD — движение   •   оружия — автоматически",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Config.C_HUD_TEXT)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 38.0),
+			draw_string(_font, Vector2(cx, cy + 38.0),
 				"Enter / Click — начать",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
 		GS.UPGRADE:
-			draw_string(_font, Vector2(W * 0.5, 110.0),
+			draw_string(_font, Vector2(cx, cy - 160.0),
 				"УРОВЕНЬ %d" % _p["level"],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 34, Config.C_HUD_TITLE)
-			draw_string(_font, Vector2(W * 0.5, 152.0),
+			draw_string(_font, Vector2(cx, cy - 118.0),
 				"Выберите улучшение",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(Config.C_HUD_TEXT, 0.85))
-			# 3 square cards in a horizontal row
 			var card_w := 200.0
 			var card_h := 210.0
 			var gap    := 24.0
 			var total  := _upgrade_choices.size() * card_w + (_upgrade_choices.size() - 1) * gap
-			var start_x := (W - total) * 0.5
-			var card_y  := 185.0
+			var start_x := (_vp.x - total) * 0.5
+			var card_y  := cy - 95.0
 			for i in _upgrade_choices.size():
 				var ch: Dictionary = _upgrade_choices[i]
 				var bx := start_x + i * (card_w + gap)
 				var bg := Color(0.12, 0.18, 0.38, 0.95)
 				draw_rect(Rect2(bx, card_y, card_w, card_h), bg)
 				draw_rect(Rect2(bx, card_y, card_w, card_h), Color(Config.C_HUD_TEXT, 0.38), false, 2.0)
-				# Number badge — pos.x=bx+6, width=22 → centered in badge rect
 				draw_rect(Rect2(bx + 6.0, card_y + 6.0, 22.0, 22.0), Color(0.3, 0.4, 0.7, 0.8))
 				draw_string(_font, Vector2(bx + 6.0, card_y + 22.0), str(i + 1),
 					HORIZONTAL_ALIGNMENT_CENTER, 22.0, 13, Color.WHITE)
-				# Icon centered in upper half
 				var icon_cx := bx + card_w * 0.5
 				var icon_cy := card_y + 82.0
 				draw_circle(Vector2(icon_cx, icon_cy), 38.0, Color(0.06, 0.1, 0.25, 0.9))
 				draw_arc(Vector2(icon_cx, icon_cy), 38.0, 0.0, TAU, 24, Color(Config.C_HUD_TEXT, 0.3), 1.5)
 				_draw_upgrade_icon(ch["id"], icon_cx, icon_cy)
-				# Name — pos.x=bx+6 (left edge), width=card_w-12 → centered within card
 				draw_string(_font, Vector2(bx + 6.0, card_y + 143.0), ch["name"],
 					HORIZONTAL_ALIGNMENT_CENTER, card_w - 12.0, 15, Color.WHITE)
-				# Desc
 				draw_string(_font, Vector2(bx + 6.0, card_y + 166.0), ch["desc"],
 					HORIZONTAL_ALIGNMENT_CENTER, card_w - 12.0, 11, Color(Config.C_HUD_TEXT, 0.75))
-			draw_string(_font, Vector2(W * 0.5, card_y + card_h + 22.0),
+			draw_string(_font, Vector2(cx, card_y + card_h + 22.0),
 				"Клавиши  1 / 2 / 3  или  нажмите карточку",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(Config.C_HUD_TEXT, 0.4))
 		GS.PAUSE:
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 50.0),
+			draw_string(_font, Vector2(cx, cy - 50.0),
 				"ПАУЗА", HORIZONTAL_ALIGNMENT_CENTER, -1, 42, Config.C_HUD_TITLE)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 8.0),
+			draw_string(_font, Vector2(cx, cy + 8.0),
 				"Счёт: %d    Время: %d:%02d    Ур.%d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60, _p["level"]],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Config.C_HUD_TEXT)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 46.0),
+			draw_string(_font, Vector2(cx, cy + 46.0),
 				"Esc — продолжить    •    Enter — в меню",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
 		GS.OVER:
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0),
+			draw_string(_font, Vector2(cx, cy - 40.0),
 				"ПОГИБ", HORIZONTAL_ALIGNMENT_CENTER, -1, 38, Config.C_HUD_BAD)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 10.0),
+			draw_string(_font, Vector2(cx, cy + 10.0),
 				"Счёт: %d    Время: %d:%02d    Ур.%d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60, _p["level"]],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Config.C_HUD_TEXT)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 45.0),
+			draw_string(_font, Vector2(cx, cy + 45.0),
 				"Enter / Click — заново",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
 		GS.WIN:
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0),
+			draw_string(_font, Vector2(cx, cy - 40.0),
 				"ПОБЕДА!", HORIZONTAL_ALIGNMENT_CENTER, -1, 38, Config.C_HUD_GOOD)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 10.0),
+			draw_string(_font, Vector2(cx, cy + 10.0),
 				"Счёт: %d    Время: %d:%02d    Ур.%d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60, _p["level"]],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Config.C_HUD_TEXT)
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 45.0),
+			draw_string(_font, Vector2(cx, cy + 45.0),
 				"Enter / Click — заново",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
 
@@ -971,6 +1004,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton:
 		var me := event as InputEventMouseButton
 		if me.pressed and me.button_index == MOUSE_BUTTON_LEFT:
+			if _state == GS.PLAY and _menu_btn.has_point(me.position):
+				_state = GS.PAUSE
+				return
 			if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
 				_init_game()
 	elif event is InputEventScreenTouch:
@@ -979,7 +1015,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
 				_init_game()
 				return
-			if _state == GS.PLAY and te.position.x < W * 0.5 and _joy_tid == -1:
+			if _state == GS.PLAY and _menu_btn.has_point(te.position):
+				_state = GS.PAUSE
+				return
+			if _state == GS.PLAY and te.position.x < _vp.x - PANEL_W and _joy_tid == -1:
 				_joy_tid = te.index
 				_joy_origin = te.position
 				_joy_cur = te.position
@@ -1019,8 +1058,8 @@ func _try_tap_upgrade(pos: Vector2) -> void:
 	var card_h := 210.0
 	var gap    := 24.0
 	var total  := _upgrade_choices.size() * card_w + (_upgrade_choices.size() - 1) * gap
-	var start_x := (W - total) * 0.5
-	var card_y  := 185.0
+	var start_x := (_vp.x - total) * 0.5
+	var card_y  := _vp.y * 0.5 - 95.0
 	for i in _upgrade_choices.size():
 		var bx := start_x + i * (card_w + gap)
 		if Rect2(bx, card_y, card_w, card_h).has_point(pos):
