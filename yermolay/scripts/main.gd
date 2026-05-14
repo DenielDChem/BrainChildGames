@@ -1,6 +1,6 @@
 extends Node2D
 
-enum GS { START, PLAY, UPGRADE, OVER, WIN }
+enum GS { START, PLAY, UPGRADE, OVER, WIN, PAUSE }
 var _state := GS.START
 
 var _p := {}
@@ -66,7 +66,7 @@ func _load_textures() -> void:
 func _init_game() -> void:
 	_p = {
 		"x": 0.0, "y": 0.0, "r": 20.0, "speed": 190.0,
-		"hp": 100.0, "max_hp": 100.0, "iframes": 0.0, "score": 0,
+		"hp": 100.0, "max_hp": 100.0, "iframes": 0.0, "upgrade_grace": 0.0, "score": 0,
 		"kills": 0, "level": 0, "next_level_kills": 10,
 		"contact_flash": 0.0,
 		"regen_clock": 3.0, "regen_rate": 3.0,
@@ -107,6 +107,7 @@ func _update(dt: float) -> void:
 		_p["x"] += mv.x; _p["y"] += mv.y
 
 	_p["iframes"] = maxf(0.0, _p["iframes"] - dt)
+	_p["upgrade_grace"] = maxf(0.0, _p["upgrade_grace"] - dt)
 	_p["contact_flash"] = maxf(0.0, _p["contact_flash"] - dt)
 	_p["regen_clock"] -= dt
 	if _p["regen_clock"] <= 0.0:
@@ -152,12 +153,12 @@ func _update(dt: float) -> void:
 					if b["hits"] >= 3: hit = true; break
 		if hit: _bullets.remove_at(i)
 
-	# Enemy bullets — iframes protect here only
+	# Enemy bullets — iframes and upgrade_grace both protect
 	for i in range(_ebullets.size() - 1, -1, -1):
 		var b: Dictionary = _ebullets[i]
 		b["x"] += b["vx"] * dt; b["y"] += b["vy"] * dt; b["life"] -= dt
 		if b["life"] <= 0.0: _ebullets.remove_at(i); continue
-		if _p["iframes"] <= 0.0 and _hits(b, _p):
+		if _p["iframes"] <= 0.0 and _p["upgrade_grace"] <= 0.0 and _hits(b, _p):
 			if b.get("insta_kill", false):
 				_kill_player()
 			else:
@@ -447,31 +448,31 @@ func _pick_chest() -> void:
 # ── Upgrade system ────────────────────────────────────────────
 func _get_upgrade_pool() -> Array:
 	var pool: Array = []
-	pool.append({"id": "dmg",         "name": "Усиленные патроны",  "desc": "Урон +25%"})
-	pool.append({"id": "firerate",    "name": "Быстрый огонь",      "desc": "Скорость стрельбы +15%"})
-	pool.append({"id": "speed",       "name": "Ускорение",          "desc": "Скорость движения +20%"})
-	pool.append({"id": "hp",          "name": "Бронежилет",         "desc": "+50 Макс. HP"})
-	pool.append({"id": "regen",       "name": "Регенерация",        "desc": "HP восстанавливается быстрее"})
+	pool.append({"id": "dmg",         "name": "Патроны",     "desc": "Урон +25%"})
+	pool.append({"id": "firerate",    "name": "Темп огня",   "desc": "Скор. стрельбы +15%"})
+	pool.append({"id": "speed",       "name": "Ускорение",   "desc": "Движение +20%"})
+	pool.append({"id": "hp",          "name": "Броня",       "desc": "+50 Макс. HP"})
+	pool.append({"id": "regen",       "name": "Регенерация", "desc": "HP восстан. быстрее"})
 	if not _p["weapons"].has("shotgun"):
-		pool.append({"id": "shotgun",   "name": "Дробовик",          "desc": "Авто-дробовик (5 дробей)"})
+		pool.append({"id": "shotgun",   "name": "Дробовик",  "desc": "Авто-дробовик (5)"})
 	if not _p["weapons"].has("lightning"):
-		pool.append({"id": "lightning", "name": "Молния",            "desc": "Цепная молния (3 врага)"})
+		pool.append({"id": "lightning", "name": "Молния",    "desc": "Цепная (3 врага)"})
 	if not _p["weapons"].has("nova"):
-		pool.append({"id": "nova",      "name": "Нова",              "desc": "Взрывная волна"})
+		pool.append({"id": "nova",      "name": "Нова",      "desc": "Взрывная волна"})
 	if not _p["weapons"].has("orbit"):
-		pool.append({"id": "orbit",     "name": "Орбита",            "desc": "3 орбитальных шара"})
+		pool.append({"id": "orbit",     "name": "Орбита",    "desc": "3 орбитальных шара"})
 	if _p["weapons"].has("shotgun"):
-		pool.append({"id": "sg_pellets","name": "Дробь+",            "desc": "Дробовик: дробь +1"})
+		pool.append({"id": "sg_pellets","name": "Дробь+",    "desc": "Дробовик: дробь +1"})
 	if _p["weapons"].has("lightning"):
-		pool.append({"id": "light_chain","name": "Молния+",          "desc": "Молния: цепочка +1"})
+		pool.append({"id": "light_chain","name": "Молния+",  "desc": "Молния: цепочка +1"})
 	if _p["weapons"].has("nova"):
-		pool.append({"id": "nova_r",    "name": "Нова+",             "desc": "Нова: радиус +30%"})
+		pool.append({"id": "nova_r",    "name": "Нова+",     "desc": "Нова: радиус +30%"})
 	if _p["weapons"].has("orbit"):
-		pool.append({"id": "orb_add",   "name": "Орбита+",           "desc": "Орбита: шар +1"})
+		pool.append({"id": "orb_add",   "name": "Орбита+",   "desc": "Орбита: шар +1"})
 	if _p["life_steal"] < 0.45:
-		pool.append({"id": "lifesteal", "name": "Вампиризм",         "desc": "15% шанс: +5 HP за убийство"})
+		pool.append({"id": "lifesteal", "name": "Вампиризм", "desc": "15%: +5HP за убийство"})
 	if not _p["bullet_pierce"]:
-		pool.append({"id": "pierce",    "name": "Пробитие",          "desc": "Пули пробивают до 3 врагов"})
+		pool.append({"id": "pierce",    "name": "Пробитие",  "desc": "Пули бьют 3 врагов"})
 	return pool
 
 func _level_up() -> void:
@@ -503,7 +504,7 @@ func _apply_upgrade(choice: Dictionary) -> void:
 		"lifesteal":    _p["life_steal"] = minf(0.6, _p["life_steal"] + 0.15)
 		"pierce":       _p["bullet_pierce"] = true
 	_show_msg(choice["name"] + "!", choice["desc"])
-	_p["iframes"] = 2.0
+	_p["upgrade_grace"] = 2.0
 	_state = GS.PLAY
 
 # ── Utilities ─────────────────────────────────────────────────
@@ -604,6 +605,7 @@ func _draw_player() -> void:
 	draw_circle(sp, 54.0, Config.C_PLAYER_AURA)
 	if _p.get("contact_flash", 0.0) > 0.0:
 		draw_circle(sp, 24.0, Color(1, 0.15, 0.1, 0.55))
+	# Blink only on hit iframes, not upgrade_grace
 	if _p["iframes"] > 0.0 and int(_p["iframes"] * 8) % 2 == 1:
 		return
 	var sz: float = float(_p["r"]) * 3.2
@@ -683,9 +685,21 @@ func _draw_chests() -> void:
 	for ch in _chests:
 		var sp := _s(ch["x"], ch["y"])
 		var pulse := 0.5 + 0.5 * sin(t * 3.0)
-		draw_rect(Rect2(sp - Vector2(12, 12), Vector2(24, 24)), Color(Config.C_CHEST, 0.15 + pulse * 0.1))
-		draw_rect(Rect2(sp - Vector2(12, 12), Vector2(24, 24)), Color(Config.C_CHEST, 0.4 + pulse * 0.5), false, 2.0)
-		draw_line(sp - Vector2(12, 0), sp + Vector2(12, 0), Color(Config.C_CHEST, 0.6), 1.5)
+		var c := Color(Config.C_CHEST, 0.15 + pulse * 0.1)
+		var ce := Color(Config.C_CHEST, 0.45 + pulse * 0.5)
+		# Body
+		draw_rect(Rect2(sp - Vector2(14, 10), Vector2(28, 20)), c)
+		draw_rect(Rect2(sp - Vector2(14, 10), Vector2(28, 20)), ce, false, 2.0)
+		# Lid
+		draw_rect(Rect2(sp - Vector2(14, 14), Vector2(28, 8)), Color(c, c.a * 1.3))
+		draw_rect(Rect2(sp - Vector2(14, 14), Vector2(28, 8)), ce, false, 2.0)
+		# Horizontal stripe
+		draw_line(sp - Vector2(12, 2), sp + Vector2(12, -2), Color(Config.C_CHEST, 0.6 + pulse * 0.3), 1.5)
+		# Lock
+		draw_circle(sp + Vector2(0, 2), 3.5, Color(Config.C_CHEST, 0.9))
+		# Corner rivets
+		for rv in [Vector2(-11, -9), Vector2(11, -9), Vector2(-11, 8), Vector2(11, 8)]:
+			draw_circle(sp + rv, 2.0, Color(Config.C_CHEST, 0.7))
 
 func _draw_wrecks() -> void:
 	for w in _wrecks:
@@ -706,22 +720,27 @@ func _draw_emit_particles() -> void:
 
 func _draw_hud() -> void:
 	if _state != GS.PLAY or _p.is_empty(): return
+	# HP bar — top-left
 	var hp_pct: float = float(_p["hp"]) / float(_p["max_hp"])
 	var hp_col := Config.C_HUD_BAD if hp_pct < 0.3 else (Config.C_HUD_WARN if hp_pct < 0.6 else Config.C_HUD_GOOD)
 	draw_rect(Rect2(12, 12, 160, 14), Color(0.08, 0.08, 0.08, 0.85))
 	draw_rect(Rect2(12, 12, 160.0 * hp_pct, 14), hp_col)
 	draw_string(_font, Vector2(12, 10), "HP  %.0f / %.0f" % [_p["hp"], _p["max_hp"]],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Config.C_HUD_TEXT)
+	# Timer / stats — top-right with explicit width so alignment works
+	var rx := W - 8.0
+	var pw := 160.0
 	var mins := int(_wave_time / 60.0); var secs := int(_wave_time) % 60
-	draw_string(_font, Vector2(W - 14, 22), "%d:%02d" % [mins, secs],
-		HORIZONTAL_ALIGNMENT_RIGHT, -1, 16, Config.C_HUD_TITLE)
-	draw_string(_font, Vector2(W - 14, 40), "%d pts" % _p["score"],
-		HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Config.C_HUD_TEXT)
-	draw_string(_font, Vector2(W - 14, 57), "Убито: %d   Ур.%d" % [_p["kills"], _p["level"]],
-		HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Config.C_HUD_TEXT)
+	draw_string(_font, Vector2(rx - pw, 22), "%d:%02d" % [mins, secs],
+		HORIZONTAL_ALIGNMENT_RIGHT, pw, 16, Config.C_HUD_TITLE)
+	draw_string(_font, Vector2(rx - pw, 40), "%d pts" % _p["score"],
+		HORIZONTAL_ALIGNMENT_RIGHT, pw, 12, Config.C_HUD_TEXT)
+	draw_string(_font, Vector2(rx - pw, 57), "Убито: %d   Ур.%d" % [_p["kills"], _p["level"]],
+		HORIZONTAL_ALIGNMENT_RIGHT, pw, 11, Config.C_HUD_TEXT)
 	var kills_left: int = _p["next_level_kills"] - _p["kills"]
-	draw_string(_font, Vector2(W - 14, 72), "До ур.: %d" % kills_left,
-		HORIZONTAL_ALIGNMENT_RIGHT, -1, 10, Color(Config.C_HUD_TEXT, 0.5))
+	draw_string(_font, Vector2(rx - pw, 72), "До ур.: %d" % kills_left,
+		HORIZONTAL_ALIGNMENT_RIGHT, pw, 10, Color(Config.C_HUD_TEXT, 0.5))
+	# Boss bar — top-center
 	if _active_boss and not _active_boss.get("dead", false):
 		var bw := 400.0; var bx := (W - bw) * 0.5; var by := 12.0
 		draw_rect(Rect2(bx, by, bw, 16), Color(0.08, 0.08, 0.08, 0.85))
@@ -729,13 +748,101 @@ func _draw_hud() -> void:
 		draw_string(_font, Vector2(W * 0.5, by - 2.0),
 			Config.ECFG[_active_boss["type"]].get("boss_name", "БОСС"),
 			HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(1, 0.6, 0.3))
+	# Notifications — bottom-center, away from player
 	if _phase_timer > 0.0:
 		var a := minf(1.0, _phase_timer)
-		draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0), _phase_lbl,
+		draw_string(_font, Vector2(W * 0.5, H - 72.0), _phase_lbl,
 			HORIZONTAL_ALIGNMENT_CENTER, -1, 24, Color(Config.C_CHEST, a))
 		if _phase_sub.length() > 0:
-			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 12.0), _phase_sub,
+			draw_string(_font, Vector2(W * 0.5, H - 44.0), _phase_sub,
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 14, Color(Config.C_HUD_TEXT, a * 0.8))
+
+func _draw_upgrade_icon(id: String, cx: float, cy: float) -> void:
+	var sz := 26.0
+	match id:
+		"dmg":
+			draw_circle(Vector2(cx, cy), sz * 0.28, Config.C_BULLET)
+			draw_line(Vector2(cx - sz * 0.55, cy), Vector2(cx + sz * 0.55, cy), Config.C_BULLET, 3.0)
+		"firerate":
+			draw_arc(Vector2(cx, cy), sz * 0.45, 0.0, TAU, 20, Config.C_HUD_TITLE, 2.5)
+			draw_line(Vector2(cx, cy), Vector2(cx + sz * 0.3, cy - sz * 0.3), Config.C_HUD_TITLE, 2.5)
+			draw_circle(Vector2(cx, cy), sz * 0.08, Config.C_HUD_TITLE)
+		"speed":
+			var pts := PackedVector2Array([
+				Vector2(cx - sz * 0.15, cy - sz * 0.5),
+				Vector2(cx + sz * 0.25, cy - sz * 0.05),
+				Vector2(cx - sz * 0.08, cy - sz * 0.05),
+				Vector2(cx + sz * 0.32, cy + sz * 0.5)
+			])
+			draw_polyline(pts, Config.C_HUD_GOOD, 3.5)
+		"hp":
+			var hh := sz * 0.38
+			draw_rect(Rect2(cx - sz * 0.13, cy - hh, sz * 0.26, hh * 2.0), Config.C_HUD_BAD)
+			draw_rect(Rect2(cx - hh, cy - sz * 0.13, hh * 2.0, sz * 0.26), Config.C_HUD_BAD)
+		"regen":
+			draw_arc(Vector2(cx, cy), sz * 0.45, -PI * 0.2, PI * 1.8, 20, Config.C_HUD_GOOD, 3.0)
+			draw_line(Vector2(cx + sz * 0.4, cy - sz * 0.1), Vector2(cx + sz * 0.45, cy + sz * 0.2), Config.C_HUD_GOOD, 3.0)
+			draw_circle(Vector2(cx, cy), sz * 0.14, Color(Config.C_HUD_GOOD, 0.5))
+		"shotgun":
+			for i in 5:
+				var ang := -0.38 + i * 0.19
+				draw_line(Vector2(cx - sz * 0.25, cy),
+					Vector2(cx + cos(ang) * sz * 0.55, cy + sin(ang) * sz * 0.55), Config.C_BULLET, 2.0)
+			draw_rect(Rect2(cx - sz * 0.35, cy - sz * 0.1, sz * 0.12, sz * 0.2), Config.C_HUD_TEXT)
+		"lightning":
+			var lpts := PackedVector2Array([
+				Vector2(cx + sz * 0.15, cy - sz * 0.5),
+				Vector2(cx - sz * 0.12, cy - sz * 0.04),
+				Vector2(cx + sz * 0.06, cy - sz * 0.04),
+				Vector2(cx - sz * 0.18, cy + sz * 0.5)
+			])
+			draw_polyline(lpts, Config.C_LIGHTNING, 3.5)
+		"nova":
+			for i in 3:
+				draw_arc(Vector2(cx, cy), sz * (0.18 + i * 0.14), 0.0, TAU, 16,
+					Color(Config.C_NOVA, 0.7 - i * 0.18), 2.0)
+		"orbit":
+			draw_arc(Vector2(cx, cy), sz * 0.48, 0.0, TAU, 24, Color(Config.C_ORB, 0.55), 2.0)
+			for i in 3:
+				var a := i * TAU / 3.0
+				draw_circle(Vector2(cx + cos(a) * sz * 0.48, cy + sin(a) * sz * 0.48), sz * 0.12, Config.C_ORB_CORE)
+		"sg_pellets":
+			for i in 6:
+				var a := i * TAU / 6.0
+				draw_circle(Vector2(cx + cos(a) * sz * 0.38, cy + sin(a) * sz * 0.38), sz * 0.1, Config.C_BULLET)
+			draw_circle(Vector2(cx, cy), sz * 0.1, Config.C_BULLET)
+		"light_chain":
+			for i in 3:
+				draw_arc(Vector2(cx - sz * 0.32 + i * sz * 0.32, cy), sz * 0.16, 0.0, TAU, 10, Config.C_LIGHTNING, 2.5)
+			for i in 2:
+				draw_line(Vector2(cx - sz * 0.16 + i * sz * 0.32, cy - sz * 0.16),
+					Vector2(cx - sz * 0.16 + i * sz * 0.32, cy + sz * 0.16), Config.C_LIGHTNING, 2.0)
+		"nova_r":
+			draw_arc(Vector2(cx, cy), sz * 0.52, 0.0, TAU, 24, Config.C_NOVA, 3.5)
+			draw_arc(Vector2(cx, cy), sz * 0.28, 0.0, TAU, 16, Color(Config.C_NOVA, 0.55), 2.0)
+		"orb_add":
+			draw_arc(Vector2(cx, cy), sz * 0.38, 0.0, TAU, 20, Color(Config.C_ORB, 0.55), 2.0)
+			for i in 3:
+				var a := i * TAU / 3.0
+				draw_circle(Vector2(cx + cos(a) * sz * 0.38, cy + sin(a) * sz * 0.38), sz * 0.1, Config.C_ORB_CORE)
+			var px := cx + sz * 0.52
+			draw_line(Vector2(px - sz * 0.14, cy), Vector2(px + sz * 0.14, cy), Config.C_ORB_CORE, 2.5)
+			draw_line(Vector2(px, cy - sz * 0.14), Vector2(px, cy + sz * 0.14), Config.C_ORB_CORE, 2.5)
+		"lifesteal":
+			draw_arc(Vector2(cx - sz * 0.17, cy - sz * 0.1), sz * 0.24, PI, 0.0, 16, Config.C_HUD_BAD, 3.0)
+			draw_arc(Vector2(cx + sz * 0.17, cy - sz * 0.1), sz * 0.24, PI, 0.0, 16, Config.C_HUD_BAD, 3.0)
+			var hpts := PackedVector2Array([
+				Vector2(cx - sz * 0.42, cy - sz * 0.1),
+				Vector2(cx, cy + sz * 0.5),
+				Vector2(cx + sz * 0.42, cy - sz * 0.1)
+			])
+			draw_polyline(hpts, Config.C_HUD_BAD, 3.0)
+		"pierce":
+			draw_line(Vector2(cx - sz * 0.55, cy), Vector2(cx + sz * 0.55, cy), Config.C_BULLET, 3.0)
+			draw_line(Vector2(cx + sz * 0.3, cy - sz * 0.25), Vector2(cx + sz * 0.55, cy), Config.C_BULLET, 3.0)
+			draw_line(Vector2(cx + sz * 0.3, cy + sz * 0.25), Vector2(cx + sz * 0.55, cy), Config.C_BULLET, 3.0)
+			for i in 3:
+				draw_circle(Vector2(cx - sz * 0.3 + i * sz * 0.28, cy), sz * 0.08, Color(Config.C_BULLET, 0.45))
 
 func _draw_overlay() -> void:
 	draw_rect(Rect2(0, 0, W, H), Color(0, 0, 0, 0.75))
@@ -750,30 +857,53 @@ func _draw_overlay() -> void:
 				"Enter / Click — начать",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
 		GS.UPGRADE:
-			draw_string(_font, Vector2(W * 0.5, 130.0),
+			draw_string(_font, Vector2(W * 0.5, 110.0),
 				"УРОВЕНЬ %d" % _p["level"],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 34, Config.C_HUD_TITLE)
-			draw_string(_font, Vector2(W * 0.5, 174.0),
+			draw_string(_font, Vector2(W * 0.5, 152.0),
 				"Выберите улучшение",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(Config.C_HUD_TEXT, 0.85))
-			var cy := 210.0
+			# 3 square cards in a horizontal row
+			var card_w := 200.0
+			var card_h := 210.0
+			var gap    := 24.0
+			var total  := _upgrade_choices.size() * card_w + (_upgrade_choices.size() - 1) * gap
+			var start_x := (W - total) * 0.5
+			var card_y  := 185.0
 			for i in _upgrade_choices.size():
 				var ch: Dictionary = _upgrade_choices[i]
-				var bx := W * 0.5 - 220.0
-				var by := cy + i * 90.0
-				var sel := i == _upgrade_selected
-				var bg := Color(0.18, 0.28, 0.55, 0.95) if sel else Color(0.07, 0.09, 0.18, 0.88)
-				draw_rect(Rect2(bx, by, 440.0, 75.0), bg)
-				var border_col := Color(Config.C_HUD_TITLE, 0.9) if sel else Color(Config.C_HUD_TEXT, 0.35)
-				draw_rect(Rect2(bx, by, 440.0, 75.0), border_col, false, 2.5)
-				draw_string(_font, Vector2(W * 0.5, by + 28.0),
-					"[%d]  %s" % [i + 1, ch["name"]],
-					HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color.WHITE if sel else Color(Config.C_HUD_TEXT, 0.9))
-				draw_string(_font, Vector2(W * 0.5, by + 52.0), ch["desc"],
-					HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color(Config.C_HUD_TEXT, 0.7))
-			draw_string(_font, Vector2(W * 0.5, cy + _upgrade_choices.size() * 90.0 + 16.0),
-				"Клавиши 1 / 2 / 3   или   ↑↓ + Enter",
+				var bx := start_x + i * (card_w + gap)
+				var bg := Color(0.12, 0.18, 0.38, 0.95)
+				draw_rect(Rect2(bx, card_y, card_w, card_h), bg)
+				draw_rect(Rect2(bx, card_y, card_w, card_h), Color(Config.C_HUD_TEXT, 0.38), false, 2.0)
+				# Number badge
+				draw_rect(Rect2(bx + 6.0, card_y + 6.0, 22.0, 22.0), Color(0.3, 0.4, 0.7, 0.8))
+				draw_string(_font, Vector2(bx + 17.0, card_y + 22.0), str(i + 1),
+					HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color.WHITE)
+				# Icon centered in upper half
+				var icon_cx := bx + card_w * 0.5
+				var icon_cy := card_y + 80.0
+				draw_circle(Vector2(icon_cx, icon_cy), 38.0, Color(0.06, 0.1, 0.25, 0.9))
+				draw_arc(Vector2(icon_cx, icon_cy), 38.0, 0.0, TAU, 24, Color(Config.C_HUD_TEXT, 0.3), 1.5)
+				_draw_upgrade_icon(ch["id"], icon_cx, icon_cy)
+				# Name
+				draw_string(_font, Vector2(bx + card_w * 0.5, card_y + 140.0), ch["name"],
+					HORIZONTAL_ALIGNMENT_CENTER, card_w - 12.0, 15, Color.WHITE)
+				# Desc
+				draw_string(_font, Vector2(bx + card_w * 0.5, card_y + 163.0), ch["desc"],
+					HORIZONTAL_ALIGNMENT_CENTER, card_w - 12.0, 11, Color(Config.C_HUD_TEXT, 0.75))
+			draw_string(_font, Vector2(W * 0.5, card_y + card_h + 22.0),
+				"Клавиши  1 / 2 / 3  или  нажмите карточку",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(Config.C_HUD_TEXT, 0.4))
+		GS.PAUSE:
+			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 50.0),
+				"ПАУЗА", HORIZONTAL_ALIGNMENT_CENTER, -1, 42, Config.C_HUD_TITLE)
+			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 8.0),
+				"Счёт: %d    Время: %d:%02d    Ур.%d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60, _p["level"]],
+				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Config.C_HUD_TEXT)
+			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 46.0),
+				"Esc — продолжить    •    Enter — в меню",
+				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
 		GS.OVER:
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0),
 				"ПОГИБ", HORIZONTAL_ALIGNMENT_CENTER, -1, 38, Config.C_HUD_BAD)
@@ -799,11 +929,32 @@ func _unhandled_input(event: InputEvent) -> void:
 		_handle_upgrade_input(event)
 		return
 
+	if _state == GS.PAUSE:
+		if event is InputEventKey and (event as InputEventKey).pressed:
+			var ke := event as InputEventKey
+			if ke.keycode == KEY_ESCAPE:
+				_state = GS.PLAY
+			elif ke.keycode == KEY_ENTER or ke.keycode == KEY_KP_ENTER:
+				_state = GS.START
+		elif event is InputEventMouseButton:
+			var me := event as InputEventMouseButton
+			if me.pressed and me.button_index == MOUSE_BUTTON_LEFT:
+				_state = GS.PLAY
+		elif event is InputEventScreenTouch:
+			if (event as InputEventScreenTouch).pressed:
+				_state = GS.PLAY
+		return
+
 	if event is InputEventKey:
 		var ke := event as InputEventKey
-		if ke.pressed and ke.keycode == KEY_ENTER:
-			if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
-				_init_game()
+		if ke.pressed:
+			match ke.keycode:
+				KEY_ENTER, KEY_KP_ENTER:
+					if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
+						_init_game()
+				KEY_ESCAPE:
+					if _state == GS.PLAY:
+						_state = GS.PAUSE
 	elif event is InputEventMouseButton:
 		var me := event as InputEventMouseButton
 		if me.pressed and me.button_index == MOUSE_BUTTON_LEFT:
@@ -841,12 +992,6 @@ func _handle_upgrade_input(event: InputEvent) -> void:
 				if _upgrade_choices.size() > 1: _apply_upgrade(_upgrade_choices[1])
 			KEY_3:
 				if _upgrade_choices.size() > 2: _apply_upgrade(_upgrade_choices[2])
-			KEY_UP, KEY_W:
-				_upgrade_selected = posmod(_upgrade_selected - 1, maxi(1, _upgrade_choices.size()))
-			KEY_DOWN, KEY_S:
-				_upgrade_selected = (_upgrade_selected + 1) % maxi(1, _upgrade_choices.size())
-			KEY_ENTER, KEY_KP_ENTER:
-				if _upgrade_choices.size() > 0: _apply_upgrade(_upgrade_choices[_upgrade_selected])
 	elif event is InputEventMouseButton:
 		var me := event as InputEventMouseButton
 		if me.pressed and me.button_index == MOUSE_BUTTON_LEFT:
@@ -857,7 +1002,13 @@ func _handle_upgrade_input(event: InputEvent) -> void:
 			_try_tap_upgrade(te.position)
 
 func _try_tap_upgrade(pos: Vector2) -> void:
-	var cy := 210.0
+	var card_w := 200.0
+	var card_h := 210.0
+	var gap    := 24.0
+	var total  := _upgrade_choices.size() * card_w + (_upgrade_choices.size() - 1) * gap
+	var start_x := (W - total) * 0.5
+	var card_y  := 185.0
 	for i in _upgrade_choices.size():
-		if Rect2(W * 0.5 - 220.0, cy + i * 90.0, 440.0, 75.0).has_point(pos):
+		var bx := start_x + i * (card_w + gap)
+		if Rect2(bx, card_y, card_w, card_h).has_point(pos):
 			_apply_upgrade(_upgrade_choices[i]); return
