@@ -1,13 +1,9 @@
 extends Node2D
 
-# ── Game states ───────────────────────────────────────────────
-enum GS { START, PLAY, OVER, WIN }
+enum GS { START, PLAY, UPGRADE, OVER, WIN }
 var _state := GS.START
 
-# ── Player ────────────────────────────────────────────────────
 var _p := {}
-
-# ── World objects ─────────────────────────────────────────────
 var _enemies:     Array = []
 var _bullets:     Array = []
 var _ebullets:    Array = []
@@ -15,27 +11,34 @@ var _particles:   Array = []
 var _chests:      Array = []
 var _wrecks:      Array = []
 var _nova_pulses: Array = []
-var _lfx:         Array = []  # lightning fx
+var _lfx:         Array = []
 
-# ── Timing ────────────────────────────────────────────────────
 var _wave_time:      float = 0.0
 var _spawn_clock:    float = 0.0
 var _bosses_spawned: Array = []
 var _active_boss             = null
 
-# ── Phase label ───────────────────────────────────────────────
 var _phase_lbl:   String = ""
 var _phase_sub:   String = ""
 var _phase_timer: float  = 0.0
 
+var _upgrade_choices:  Array = []
+var _upgrade_selected: int   = 0
+
 const W: int = 1100
 const H: int = 720
-
 var _font: Font
 
-# ── Virtual joystick (touch) ───────────────────────────────────
-const JOY_R    := 72.0    # outer ring radius
-const JOY_DEAD := 12.0    # dead zone pixels
+var _tex := {}
+const _ENEMY_IMG := {
+	0: "enemy_drone", 1: "enemy_inter", 2: "enemy_heavy", 3: "enemy_obs", 4: "enemy_node",
+	5: "enemy_berserker", 6: "enemy_titan", 7: "enemy_predator", 8: "enemy_reaper",
+	9: "enemy_hunter", 10: "enemy_colossus", 11: "enemy_omega",
+}
+const _WRECK_IMG := {9: "wreck_hunter", 10: "wreck_colossus", 11: "wreck_omega"}
+
+const JOY_R    := 72.0
+const JOY_DEAD := 12.0
 var _joy_vec    := Vector2.ZERO
 var _joy_origin := Vector2.ZERO
 var _joy_cur    := Vector2.ZERO
@@ -44,13 +47,29 @@ var _joy_tid    := -1
 # ── Init ──────────────────────────────────────────────────────
 func _ready() -> void:
 	_font = ThemeDB.fallback_font
+	_load_textures()
 	_state = GS.START
+
+func _load_textures() -> void:
+	var names := [
+		"player", "bullet", "bullet_shot", "bullet_lightning", "bg_tile",
+		"enemy_drone", "enemy_inter", "enemy_heavy", "enemy_obs", "enemy_node",
+		"enemy_berserker", "enemy_titan", "enemy_predator", "enemy_reaper",
+		"enemy_hunter", "enemy_colossus", "enemy_omega",
+		"wreck_hunter", "wreck_colossus", "wreck_omega",
+	]
+	for n in names:
+		var path := "res://assets/images/%s.png" % n
+		if ResourceLoader.exists(path):
+			_tex[n] = load(path) as Texture2D
 
 func _init_game() -> void:
 	_p = {
 		"x": 0.0, "y": 0.0, "r": 20.0, "speed": 190.0,
 		"hp": 100.0, "max_hp": 100.0, "iframes": 0.0, "score": 0,
-		"regen_clock": 3.0,
+		"kills": 0, "level": 0, "next_level_kills": 10,
+		"contact_flash": 0.0,
+		"regen_clock": 3.0, "regen_rate": 3.0,
 		"weapons": ["single"],
 		"single_clock": 0.0, "single_rate": 1.0,
 		"sg_clock": 0.0,     "sg_rate": 1.7,  "sg_count": 5, "sg_dmg": 1.0, "sg_pierce": false,
@@ -58,6 +77,7 @@ func _init_game() -> void:
 		"nova_clock": 0.0,   "nova_rate": 4.0,  "nova_radius": 110.0,
 		"orb_angle": 0.0,    "orb_count": 3,    "orb_radius": 82.0, "orb_dmg": 1.0, "orb_cd": {},
 		"bullet_dmg": 0.95,  "fire_rate": 1.0,  "life_steal": 0.0,
+		"bullet_pierce": false,
 		"taken": [],
 	}
 	_enemies.clear(); _bullets.clear(); _ebullets.clear()
@@ -65,6 +85,7 @@ func _init_game() -> void:
 	_nova_pulses.clear(); _lfx.clear()
 	_wave_time = 0.0; _spawn_clock = 0.0
 	_bosses_spawned.clear(); _active_boss = null; _phase_timer = 0.0
+	_upgrade_choices.clear(); _upgrade_selected = 0
 	_spawn_chest(); _spawn_chest()
 	_state = GS.PLAY
 	_show_msg("Фаза I", "Начало...")
@@ -76,8 +97,7 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _update(dt: float) -> void:
-	# Player movement — keyboard + virtual joystick
-	var mv := _joy_vec   # joystick already normalized (or zero)
+	var mv := _joy_vec
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):    mv.y -= 1.0
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN):  mv.y += 1.0
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):  mv.x -= 1.0
@@ -87,22 +107,21 @@ func _update(dt: float) -> void:
 		_p["x"] += mv.x; _p["y"] += mv.y
 
 	_p["iframes"] = maxf(0.0, _p["iframes"] - dt)
+	_p["contact_flash"] = maxf(0.0, _p["contact_flash"] - dt)
 	_p["regen_clock"] -= dt
 	if _p["regen_clock"] <= 0.0:
 		_p["hp"] = minf(_p["max_hp"], _p["hp"] + 1.0)
-		_p["regen_clock"] = 3.0
+		_p["regen_clock"] = _p["regen_rate"]
 
 	_wave_time += dt
 	_phase_timer = maxf(0.0, _phase_timer - dt)
 
-	# Boss schedule
 	for sched in Config.BOSS_SCHEDULE:
 		if not _bosses_spawned.has(sched["type"]) and _wave_time >= sched["at"]:
 			_bosses_spawned.append(sched["type"])
 			var a := randf() * TAU
 			_spawn_enemy_at(sched["type"], _p["x"] + cos(a) * 700.0, _p["y"] + sin(a) * 700.0)
 
-	# Enemy spawn
 	_spawn_clock -= dt
 	if _spawn_clock <= 0.0:
 		var base := 3 if _wave_time > 420 else (2 if _wave_time > 180 else 1)
@@ -110,7 +129,6 @@ func _update(dt: float) -> void:
 			_spawn_enemy()
 		_spawn_clock = maxf(0.3, 2.0 - _wave_time * 0.012)
 
-	# Update enemies
 	for e in _enemies:
 		if not e.get("dead", false):
 			_update_enemy(e, dt)
@@ -134,7 +152,7 @@ func _update(dt: float) -> void:
 					if b["hits"] >= 3: hit = true; break
 		if hit: _bullets.remove_at(i)
 
-	# Enemy bullets
+	# Enemy bullets — iframes protect here only
 	for i in range(_ebullets.size() - 1, -1, -1):
 		var b: Dictionary = _ebullets[i]
 		b["x"] += b["vx"] * dt; b["y"] += b["vy"] * dt; b["life"] -= dt
@@ -149,7 +167,7 @@ func _update(dt: float) -> void:
 				if _p["hp"] <= 0.0: _kill_player()
 			_ebullets.remove_at(i)
 
-	# Chests
+	# Chests — heal on pickup
 	for i in range(_chests.size() - 1, -1, -1):
 		if _hits(_p, _chests[i]):
 			_pick_chest(); _chests.remove_at(i)
@@ -157,7 +175,7 @@ func _update(dt: float) -> void:
 	if int(_wave_time) % 25 == 0 and int(_wave_time) != int(_wave_time - dt) and _chests.size() < 8:
 		_spawn_chest()
 
-	# Weapons (auto-aim)
+	# Weapons
 	var tgt = _nearest_enemy()
 	var fr: float = _p["fire_rate"]
 
@@ -199,7 +217,6 @@ func _update(dt: float) -> void:
 					_emit_particles(orb["x"], orb["y"], Config.C_ORB, 4, 80.0)
 					if e["hp"] <= 0.0: _kill_enemy(e)
 
-	# Nova pulses
 	for i in range(_nova_pulses.size() - 1, -1, -1):
 		var n: Dictionary = _nova_pulses[i]
 		n["life"] -= dt
@@ -211,28 +228,27 @@ func _update(dt: float) -> void:
 				e["hp"] -= _p["bullet_dmg"] * 0.8; e["hit_flash"] = 0.1
 				if e["hp"] <= 0.0: _kill_enemy(e)
 
-	# Lightning FX decay
 	for i in range(_lfx.size() - 1, -1, -1):
 		_lfx[i]["life"] -= dt
 		if _lfx[i]["life"] <= 0.0: _lfx.remove_at(i)
 
-	# Particles
 	for i in range(_particles.size() - 1, -1, -1):
 		var pt: Dictionary = _particles[i]
 		pt["x"] += pt["vx"] * dt; pt["y"] += pt["vy"] * dt
 		pt["vx"] *= 0.87; pt["vy"] *= 0.87; pt["life"] -= dt
 		if pt["life"] <= 0.0: _particles.remove_at(i)
 
-	# Enemy contact damage
+	# Contact damage — continuous per-frame, no iframes (contact_flash = VFX only)
 	for e in _enemies:
 		if e.get("dead", false): continue
-		if _p["iframes"] <= 0.0 and _hits(e, _p):
+		if _hits(e, _p):
 			_p["hp"] = maxf(0.0, _p["hp"] - e["dmg"] * dt * 2.5)
-			_p["iframes"] = 1.0
-			_emit_particles(_p["x"], _p["y"], Color(1, 0.2, 0.2), 14, 130.0)
-			if _p["hp"] <= 0.0: _kill_player()
+			if _p["contact_flash"] <= 0.0:
+				_emit_particles(_p["x"], _p["y"], Color(1, 0.2, 0.2), 6, 80.0)
+				_p["contact_flash"] = 0.15
+			if _p["hp"] <= 0.0:
+				_kill_player(); break
 
-	# Flush dead enemies
 	_enemies = _enemies.filter(func(e): return not e.get("dead", false))
 
 # ── Enemy AI ──────────────────────────────────────────────────
@@ -264,7 +280,7 @@ func _update_enemy(e: Dictionary, dt: float) -> void:
 
 func _update_boss(e: Dictionary, dt: float) -> void:
 	match e["type"]:
-		9:  # Hunter — speed aura + spread burst
+		9:
 			e["abil_a1"] = e.get("abil_a1", 15.0) - dt
 			if e["abil_a1"] <= 0.0:
 				for en in _enemies:
@@ -282,8 +298,7 @@ func _update_boss(e: Dictionary, dt: float) -> void:
 						"vx": cos(ang + da) * 350.0, "vy": sin(ang + da) * 350.0,
 						"r": 10.0, "life": 3.5, "dmg": e["dmg"] * 0.85, "insta_kill": false})
 				e["abil_a2"] = 20.0
-
-		10: # Colossus — dash charge
+		10:
 			e["abil_a2"] = e.get("abil_a2", 20.0) - dt
 			if e["abil_a2"] <= 0.0 and not e.get("dashing", false):
 				e["dashing"] = true; e["dash_timer"] = 0.45
@@ -297,8 +312,7 @@ func _update_boss(e: Dictionary, dt: float) -> void:
 				else:
 					e["x"] += e.get("dash_vx", 0.0) * dt
 					e["y"] += e.get("dash_vy", 0.0) * dt
-
-		11: # Omega — aim-lock shot
+		11:
 			e["abil_a1"] = e.get("abil_a1", 10.0) - dt
 			if e["abil_a1"] <= 0.0 and not e.get("is_aiming", false):
 				e["is_aiming"] = true
@@ -324,7 +338,8 @@ func _fire_single(t: Dictionary) -> void:
 	var ang := atan2(t["y"] - _p["y"], t["x"] - _p["x"])
 	_bullets.append({"x": _p["x"], "y": _p["y"],
 		"vx": cos(ang) * 480.0, "vy": sin(ang) * 480.0,
-		"r": 6.0, "life": 2.0, "dmg": _p["bullet_dmg"] * 18.0, "pierce": false})
+		"r": 6.0, "life": 2.0, "dmg": _p["bullet_dmg"] * 18.0,
+		"pierce": _p["bullet_pierce"]})
 
 func _fire_shotgun(t: Dictionary) -> void:
 	var ang := atan2(t["y"] - _p["y"], t["x"] - _p["x"])
@@ -390,6 +405,7 @@ func _kill_enemy(e: Dictionary) -> void:
 	if e.get("dead", false): return
 	e["dead"] = true
 	_p["score"] += e["score"]
+	_p["kills"] += 5 if e["is_boss"] else 1
 	if _p["life_steal"] > 0.0 and randf() < _p["life_steal"]:
 		_p["hp"] = minf(_p["max_hp"], _p["hp"] + 5.0)
 	_emit_particles(e["x"], e["y"],
@@ -402,6 +418,9 @@ func _kill_enemy(e: Dictionary) -> void:
 		_show_msg("Босс повержен!", "+%d очков" % e["score"])
 	if e.get("is_final", false):
 		_state = GS.WIN
+		return
+	if _p["kills"] >= _p["next_level_kills"] and _state == GS.PLAY:
+		_level_up()
 
 func _kill_player() -> void:
 	if _state == GS.OVER or _state == GS.WIN: return
@@ -411,13 +430,81 @@ func _kill_player() -> void:
 func _pick_chest() -> void:
 	_emit_particles(_p["x"], _p["y"], Config.C_CHEST, 22, 190.0)
 	match randi() % 4:
-		0: _p["bullet_dmg"] *= 1.3;  _show_msg("Урон +30%!")
-		1: _p["fire_rate"]  *= 0.85; _show_msg("Перезарядка -15%!")
-		2: _p["speed"]      *= 1.2;  _show_msg("Скорость +20%!")
+		0:
+			_p["bullet_dmg"] *= 1.3
+			_show_msg("Урон +30%!", "Пули наносят больше урона")
+		1:
+			_p["fire_rate"] *= 0.85
+			_show_msg("Огонь +15%!", "Стреляешь быстрее")
+		2:
+			_p["speed"] *= 1.2
+			_show_msg("Скорость +20%!", "Двигаешься быстрее")
 		3:
 			_p["max_hp"] += 40.0
 			_p["hp"] = minf(_p["hp"] + 40.0, _p["max_hp"])
-			_show_msg("+40 HP!")
+			_show_msg("+40 HP!", "Максимальное здоровье растёт")
+
+# ── Upgrade system ────────────────────────────────────────────
+func _get_upgrade_pool() -> Array:
+	var pool: Array = []
+	pool.append({"id": "dmg",         "name": "Усиленные патроны",  "desc": "Урон +25%"})
+	pool.append({"id": "firerate",    "name": "Быстрый огонь",      "desc": "Скорость стрельбы +15%"})
+	pool.append({"id": "speed",       "name": "Ускорение",          "desc": "Скорость движения +20%"})
+	pool.append({"id": "hp",          "name": "Бронежилет",         "desc": "+50 Макс. HP"})
+	pool.append({"id": "regen",       "name": "Регенерация",        "desc": "HP восстанавливается быстрее"})
+	if not _p["weapons"].has("shotgun"):
+		pool.append({"id": "shotgun",   "name": "Дробовик",          "desc": "Авто-дробовик (5 дробей)"})
+	if not _p["weapons"].has("lightning"):
+		pool.append({"id": "lightning", "name": "Молния",            "desc": "Цепная молния (3 врага)"})
+	if not _p["weapons"].has("nova"):
+		pool.append({"id": "nova",      "name": "Нова",              "desc": "Взрывная волна"})
+	if not _p["weapons"].has("orbit"):
+		pool.append({"id": "orbit",     "name": "Орбита",            "desc": "3 орбитальных шара"})
+	if _p["weapons"].has("shotgun"):
+		pool.append({"id": "sg_pellets","name": "Дробь+",            "desc": "Дробовик: дробь +1"})
+	if _p["weapons"].has("lightning"):
+		pool.append({"id": "light_chain","name": "Молния+",          "desc": "Молния: цепочка +1"})
+	if _p["weapons"].has("nova"):
+		pool.append({"id": "nova_r",    "name": "Нова+",             "desc": "Нова: радиус +30%"})
+	if _p["weapons"].has("orbit"):
+		pool.append({"id": "orb_add",   "name": "Орбита+",           "desc": "Орбита: шар +1"})
+	if _p["life_steal"] < 0.45:
+		pool.append({"id": "lifesteal", "name": "Вампиризм",         "desc": "15% шанс: +5 HP за убийство"})
+	if not _p["bullet_pierce"]:
+		pool.append({"id": "pierce",    "name": "Пробитие",          "desc": "Пули пробивают до 3 врагов"})
+	return pool
+
+func _level_up() -> void:
+	_p["level"] += 1
+	_p["next_level_kills"] += (_p["level"] + 1) * 10
+	var pool := _get_upgrade_pool()
+	pool.shuffle()
+	_upgrade_choices = pool.slice(0, mini(3, pool.size()))
+	_upgrade_selected = 0
+	_state = GS.UPGRADE
+
+func _apply_upgrade(choice: Dictionary) -> void:
+	match choice["id"]:
+		"dmg":          _p["bullet_dmg"] *= 1.25
+		"firerate":     _p["fire_rate"]  *= 0.85
+		"speed":        _p["speed"]      *= 1.2
+		"hp":
+			_p["max_hp"] += 50.0
+			_p["hp"] = minf(_p["hp"] + 50.0, _p["max_hp"])
+		"regen":        _p["regen_rate"] = maxf(1.0, _p["regen_rate"] - 0.75)
+		"shotgun":      _p["weapons"].append("shotgun")
+		"lightning":    _p["weapons"].append("lightning")
+		"nova":         _p["weapons"].append("nova")
+		"orbit":        _p["weapons"].append("orbit")
+		"sg_pellets":   _p["sg_count"] += 1
+		"light_chain":  _p["light_chain"] += 1
+		"nova_r":       _p["nova_radius"] *= 1.3
+		"orb_add":      _p["orb_count"] += 1
+		"lifesteal":    _p["life_steal"] = minf(0.6, _p["life_steal"] + 0.15)
+		"pierce":       _p["bullet_pierce"] = true
+	_show_msg(choice["name"] + "!", choice["desc"])
+	_p["iframes"] = 2.0
+	_state = GS.PLAY
 
 # ── Utilities ─────────────────────────────────────────────────
 func _nearest_enemy() -> Variant:
@@ -450,7 +537,6 @@ func _emit_particles(x: float, y: float, col: Color, n: int, spd: float = 120.0)
 func _show_msg(title: String, sub: String = "") -> void:
 	_phase_lbl = title; _phase_sub = sub; _phase_timer = 3.0
 
-# World → screen (manual camera — no Camera2D needed)
 func _s(wx: float, wy: float) -> Vector2:
 	return Vector2(wx - _p["x"] + W * 0.5, wy - _p["y"] + H * 0.5)
 
@@ -475,39 +561,58 @@ func _draw() -> void:
 
 func _draw_joystick() -> void:
 	if _joy_tid == -1:
-		# Ghost ring at fixed bottom-left position when not active
 		var ghost := Vector2(110.0, H - 110.0)
 		draw_arc(ghost, JOY_R, 0.0, TAU, 32, Color(1, 1, 1, 0.10), 2.0)
 		draw_circle(ghost, 20.0, Color(1, 1, 1, 0.07))
 		return
-	# Active: draw at anchor position
 	draw_arc(_joy_origin, JOY_R, 0.0, TAU, 32, Color(1, 1, 1, 0.22), 2.0)
 	var knob := _joy_origin + (_joy_cur - _joy_origin).limit_length(JOY_R)
 	draw_circle(_joy_origin, 6.0, Color(1, 1, 1, 0.18))
 	draw_circle(knob, 26.0, Color(1, 1, 1, 0.32))
 
 func _draw_bg() -> void:
-	draw_rect(Rect2(0, 0, W, H), Config.C_BG)
-	var gs := 80.0
-	var ox := fmod(-_p.get("x", 0.0), gs); if ox < 0.0: ox += gs
-	var oy := fmod(-_p.get("y", 0.0), gs); if oy < 0.0: oy += gs
-	var x := ox - gs
-	while x < W + gs:
-		draw_line(Vector2(x, 0), Vector2(x, H), Config.C_GRID, 1.0)
-		x += gs
-	var y := oy - gs
-	while y < H + gs:
-		draw_line(Vector2(0, y), Vector2(W, y), Config.C_GRID, 1.0)
-		y += gs
+	if _tex.has("bg_tile"):
+		var TW := 1024.0
+		var cam_x: float = _p.get("x", 0.0)
+		var cam_y: float = _p.get("y", 0.0)
+		var tx0 := int(floor((cam_x - W * 0.5) / TW))
+		var ty0 := int(floor((cam_y - H * 0.5) / TW))
+		var tx1 := int(ceil((cam_x + W * 0.5) / TW))
+		var ty1 := int(ceil((cam_y + H * 0.5) / TW))
+		for tx in range(tx0, tx1 + 1):
+			for ty in range(ty0, ty1 + 1):
+				var sx := tx * TW - cam_x + W * 0.5
+				var sy := ty * TW - cam_y + H * 0.5
+				draw_texture_rect(_tex["bg_tile"], Rect2(sx, sy, TW, TW), false)
+	else:
+		draw_rect(Rect2(0, 0, W, H), Config.C_BG)
+		var gs := 80.0
+		var ox := fmod(-_p.get("x", 0.0), gs); if ox < 0.0: ox += gs
+		var oy := fmod(-_p.get("y", 0.0), gs); if oy < 0.0: oy += gs
+		var x := ox - gs
+		while x < W + gs:
+			draw_line(Vector2(x, 0), Vector2(x, H), Config.C_GRID, 1.0)
+			x += gs
+		var y := oy - gs
+		while y < H + gs:
+			draw_line(Vector2(0, y), Vector2(W, y), Config.C_GRID, 1.0)
+			y += gs
 
 func _draw_player() -> void:
 	if _state == GS.OVER or _p.is_empty(): return
 	var sp := _s(_p["x"], _p["y"])
 	draw_circle(sp, 54.0, Config.C_PLAYER_AURA)
+	if _p.get("contact_flash", 0.0) > 0.0:
+		draw_circle(sp, 24.0, Color(1, 0.15, 0.1, 0.55))
 	if _p["iframes"] > 0.0 and int(_p["iframes"] * 8) % 2 == 1:
 		return
-	draw_circle(sp, 18.0, Config.C_PLAYER)
-	draw_arc(sp, 23.0, 0.0, TAU, 32, Color(Config.C_PLAYER, 0.5), 1.5)
+	var sz := _p["r"] * 3.2
+	if _tex.has("player"):
+		var flash_mod := Color(2.5, 2.5, 2.5, 1.0) if _p.get("contact_flash", 0.0) > 0.0 else Color.WHITE
+		draw_texture_rect(_tex["player"], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false, flash_mod)
+	else:
+		draw_circle(sp, 18.0, Config.C_PLAYER)
+		draw_arc(sp, 23.0, 0.0, TAU, 32, Color(Config.C_PLAYER, 0.5), 1.5)
 
 func _draw_orbs() -> void:
 	if _p.is_empty() or not _p["weapons"].has("orbit"): return
@@ -525,10 +630,16 @@ func _draw_enemies() -> void:
 		var sp := _s(e["x"], e["y"])
 		if sp.x < -300 or sp.x > W + 300 or sp.y < -300 or sp.y > H + 300: continue
 		var fl: bool = float(e["hit_flash"]) > 0.0
-		var base: Color = Color.WHITE if fl else (Config.ENEMY_BASE.get(e["type"], Color(0.15, 0.15, 0.15)) as Color)
-		var accent: Color = Color.WHITE if fl else (Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5)) as Color)
-		draw_circle(sp, e["r"], base)
-		draw_arc(sp, e["r"], 0.0, TAU, 24, accent, 2.0 if e["is_boss"] else 1.5)
+		var img_key: String = _ENEMY_IMG.get(e["type"], "")
+		if img_key != "" and _tex.has(img_key):
+			var sz := float(e["r"]) * 2.8
+			var mod := Color(3.0, 3.0, 3.0, 1.0) if fl else Color.WHITE
+			draw_texture_rect(_tex[img_key], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false, mod)
+		else:
+			var base: Color = Color.WHITE if fl else (Config.ENEMY_BASE.get(e["type"], Color(0.15, 0.15, 0.15)) as Color)
+			var accent: Color = Color.WHITE if fl else (Config.ENEMY_ACCENT.get(e["type"], Color(0.4, 0.4, 0.5)) as Color)
+			draw_circle(sp, e["r"], base)
+			draw_arc(sp, e["r"], 0.0, TAU, 24, accent, 2.0 if e["is_boss"] else 1.5)
 		if e["is_boss"]:
 			draw_arc(sp, e["r"] + 8.0, t * 1.2, t * 1.2 + TAU * 0.6, 16, Color(accent, 0.45), 3.0)
 			if e.get("is_aiming", false) and e.get("aim_pos"):
@@ -546,7 +657,12 @@ func _draw_enemies() -> void:
 
 func _draw_bullets() -> void:
 	for b in _bullets:
-		draw_circle(_s(b["x"], b["y"]), b["r"], Config.C_BULLET)
+		var sp := _s(b["x"], b["y"])
+		if _tex.has("bullet"):
+			var sz := b["r"] * 3.2
+			draw_texture_rect(_tex["bullet"], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false)
+		else:
+			draw_circle(sp, b["r"], Config.C_BULLET)
 
 func _draw_ebullets() -> void:
 	for b in _ebullets:
@@ -574,8 +690,13 @@ func _draw_chests() -> void:
 func _draw_wrecks() -> void:
 	for w in _wrecks:
 		var sp := _s(w["x"], w["y"])
-		draw_circle(sp, w["r"], Config.C_WRECK)
-		draw_arc(sp, w["r"], 0.0, TAU, 16, Color(0.4, 0.3, 0.2, 0.5), 2.0)
+		var wkey: String = _WRECK_IMG.get(w["type"], "")
+		if wkey != "" and _tex.has(wkey):
+			var sz := float(w["r"]) * 2.8
+			draw_texture_rect(_tex[wkey], Rect2(sp.x - sz * 0.5, sp.y - sz * 0.5, sz, sz), false, Color(1, 1, 1, 0.5))
+		else:
+			draw_circle(sp, w["r"], Config.C_WRECK)
+			draw_arc(sp, w["r"], 0.0, TAU, 16, Color(0.4, 0.3, 0.2, 0.5), 2.0)
 
 func _draw_emit_particles() -> void:
 	for pt in _particles:
@@ -585,20 +706,22 @@ func _draw_emit_particles() -> void:
 
 func _draw_hud() -> void:
 	if _state != GS.PLAY or _p.is_empty(): return
-	# HP bar
 	var hp_pct: float = float(_p["hp"]) / float(_p["max_hp"])
 	var hp_col := Config.C_HUD_BAD if hp_pct < 0.3 else (Config.C_HUD_WARN if hp_pct < 0.6 else Config.C_HUD_GOOD)
 	draw_rect(Rect2(12, 12, 160, 14), Color(0.08, 0.08, 0.08, 0.85))
 	draw_rect(Rect2(12, 12, 160.0 * hp_pct, 14), hp_col)
 	draw_string(_font, Vector2(12, 10), "HP  %.0f / %.0f" % [_p["hp"], _p["max_hp"]],
 		HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Config.C_HUD_TEXT)
-	# Timer
 	var mins := int(_wave_time / 60.0); var secs := int(_wave_time) % 60
 	draw_string(_font, Vector2(W - 14, 22), "%d:%02d" % [mins, secs],
 		HORIZONTAL_ALIGNMENT_RIGHT, -1, 16, Config.C_HUD_TITLE)
 	draw_string(_font, Vector2(W - 14, 40), "%d pts" % _p["score"],
 		HORIZONTAL_ALIGNMENT_RIGHT, -1, 12, Config.C_HUD_TEXT)
-	# Boss HP bar
+	draw_string(_font, Vector2(W - 14, 57), "Убито: %d   Ур.%d" % [_p["kills"], _p["level"]],
+		HORIZONTAL_ALIGNMENT_RIGHT, -1, 11, Config.C_HUD_TEXT)
+	var kills_left: int = _p["next_level_kills"] - _p["kills"]
+	draw_string(_font, Vector2(W - 14, 72), "До ур.: %d" % kills_left,
+		HORIZONTAL_ALIGNMENT_RIGHT, -1, 10, Color(Config.C_HUD_TEXT, 0.5))
 	if _active_boss and not _active_boss.get("dead", false):
 		var bw := 400.0; var bx := (W - bw) * 0.5; var by := 12.0
 		draw_rect(Rect2(bx, by, bw, 16), Color(0.08, 0.08, 0.08, 0.85))
@@ -606,7 +729,6 @@ func _draw_hud() -> void:
 		draw_string(_font, Vector2(W * 0.5, by - 2.0),
 			Config.ECFG[_active_boss["type"]].get("boss_name", "БОСС"),
 			HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(1, 0.6, 0.3))
-	# Phase label
 	if _phase_timer > 0.0:
 		var a := minf(1.0, _phase_timer)
 		draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0), _phase_lbl,
@@ -627,11 +749,36 @@ func _draw_overlay() -> void:
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 38.0),
 				"Enter / Click — начать",
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 13, Color(Config.C_HUD_TEXT, 0.6))
+		GS.UPGRADE:
+			draw_string(_font, Vector2(W * 0.5, 130.0),
+				"УРОВЕНЬ %d" % _p["level"],
+				HORIZONTAL_ALIGNMENT_CENTER, -1, 34, Config.C_HUD_TITLE)
+			draw_string(_font, Vector2(W * 0.5, 174.0),
+				"Выберите улучшение",
+				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Color(Config.C_HUD_TEXT, 0.85))
+			var cy := 210.0
+			for i in _upgrade_choices.size():
+				var ch: Dictionary = _upgrade_choices[i]
+				var bx := W * 0.5 - 220.0
+				var by := cy + i * 90.0
+				var sel := i == _upgrade_selected
+				var bg := Color(0.18, 0.28, 0.55, 0.95) if sel else Color(0.07, 0.09, 0.18, 0.88)
+				draw_rect(Rect2(bx, by, 440.0, 75.0), bg)
+				var border_col := Color(Config.C_HUD_TITLE, 0.9) if sel else Color(Config.C_HUD_TEXT, 0.35)
+				draw_rect(Rect2(bx, by, 440.0, 75.0), border_col, false, 2.5)
+				draw_string(_font, Vector2(W * 0.5, by + 28.0),
+					"[%d]  %s" % [i + 1, ch["name"]],
+					HORIZONTAL_ALIGNMENT_CENTER, -1, 18, Color.WHITE if sel else Color(Config.C_HUD_TEXT, 0.9))
+				draw_string(_font, Vector2(W * 0.5, by + 52.0), ch["desc"],
+					HORIZONTAL_ALIGNMENT_CENTER, -1, 12, Color(Config.C_HUD_TEXT, 0.7))
+			draw_string(_font, Vector2(W * 0.5, cy + _upgrade_choices.size() * 90.0 + 16.0),
+				"Клавиши 1 / 2 / 3   или   ↑↓ + Enter",
+				HORIZONTAL_ALIGNMENT_CENTER, -1, 11, Color(Config.C_HUD_TEXT, 0.4))
 		GS.OVER:
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0),
 				"ПОГИБ", HORIZONTAL_ALIGNMENT_CENTER, -1, 38, Config.C_HUD_BAD)
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 10.0),
-				"Счёт: %d    Время: %d:%02d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60],
+				"Счёт: %d    Время: %d:%02d    Ур.%d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60, _p["level"]],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Config.C_HUD_TEXT)
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 45.0),
 				"Enter / Click — заново",
@@ -640,7 +787,7 @@ func _draw_overlay() -> void:
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 - 40.0),
 				"ПОБЕДА!", HORIZONTAL_ALIGNMENT_CENTER, -1, 38, Config.C_HUD_GOOD)
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 10.0),
-				"Счёт: %d    Время: %d:%02d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60],
+				"Счёт: %d    Время: %d:%02d    Ур.%d" % [_p["score"], int(_wave_time / 60.0), int(_wave_time) % 60, _p["level"]],
 				HORIZONTAL_ALIGNMENT_CENTER, -1, 16, Config.C_HUD_TEXT)
 			draw_string(_font, Vector2(W * 0.5, H * 0.5 + 45.0),
 				"Enter / Click — заново",
@@ -648,40 +795,69 @@ func _draw_overlay() -> void:
 
 # ── Input ─────────────────────────────────────────────────────
 func _unhandled_input(event: InputEvent) -> void:
+	if _state == GS.UPGRADE:
+		_handle_upgrade_input(event)
+		return
+
 	if event is InputEventKey:
 		var ke := event as InputEventKey
 		if ke.pressed and ke.keycode == KEY_ENTER:
-			if _state != GS.PLAY:
+			if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
 				_init_game()
 	elif event is InputEventMouseButton:
 		var me := event as InputEventMouseButton
 		if me.pressed and me.button_index == MOUSE_BUTTON_LEFT:
-			if _state != GS.PLAY:
+			if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
 				_init_game()
 	elif event is InputEventScreenTouch:
 		var te := event as InputEventScreenTouch
 		if te.pressed:
-			if _state != GS.PLAY:
+			if _state == GS.START or _state == GS.OVER or _state == GS.WIN:
 				_init_game()
 				return
-			# Left half of screen → joystick anchor
-			if te.position.x < W * 0.5 and _joy_tid == -1:
+			if _state == GS.PLAY and te.position.x < W * 0.5 and _joy_tid == -1:
 				_joy_tid = te.index
 				_joy_origin = te.position
 				_joy_cur = te.position
 				_joy_vec = Vector2.ZERO
 		else:
 			if te.index == _joy_tid:
-				_joy_tid = -1
-				_joy_vec = Vector2.ZERO
-				_joy_cur = Vector2.ZERO
+				_joy_tid = -1; _joy_vec = Vector2.ZERO; _joy_cur = Vector2.ZERO
 	elif event is InputEventScreenDrag:
 		var de := event as InputEventScreenDrag
 		if de.index == _joy_tid:
 			_joy_cur = de.position
 			var delta_pos := _joy_cur - _joy_origin
 			var dist := delta_pos.length()
-			if dist > JOY_DEAD:
-				_joy_vec = delta_pos.normalized() * minf(dist / JOY_R, 1.0)
-			else:
-				_joy_vec = Vector2.ZERO
+			_joy_vec = delta_pos.normalized() * minf(dist / JOY_R, 1.0) if dist > JOY_DEAD else Vector2.ZERO
+
+func _handle_upgrade_input(event: InputEvent) -> void:
+	if event is InputEventKey and (event as InputEventKey).pressed:
+		var ke := event as InputEventKey
+		match ke.keycode:
+			KEY_1:
+				if _upgrade_choices.size() > 0: _apply_upgrade(_upgrade_choices[0])
+			KEY_2:
+				if _upgrade_choices.size() > 1: _apply_upgrade(_upgrade_choices[1])
+			KEY_3:
+				if _upgrade_choices.size() > 2: _apply_upgrade(_upgrade_choices[2])
+			KEY_UP, KEY_W:
+				_upgrade_selected = posmod(_upgrade_selected - 1, maxi(1, _upgrade_choices.size()))
+			KEY_DOWN, KEY_S:
+				_upgrade_selected = (_upgrade_selected + 1) % maxi(1, _upgrade_choices.size())
+			KEY_ENTER, KEY_KP_ENTER:
+				if _upgrade_choices.size() > 0: _apply_upgrade(_upgrade_choices[_upgrade_selected])
+	elif event is InputEventMouseButton:
+		var me := event as InputEventMouseButton
+		if me.pressed and me.button_index == MOUSE_BUTTON_LEFT:
+			_try_tap_upgrade(me.position)
+	elif event is InputEventScreenTouch:
+		var te := event as InputEventScreenTouch
+		if te.pressed:
+			_try_tap_upgrade(te.position)
+
+func _try_tap_upgrade(pos: Vector2) -> void:
+	var cy := 210.0
+	for i in _upgrade_choices.size():
+		if Rect2(W * 0.5 - 220.0, cy + i * 90.0, 440.0, 75.0).has_point(pos):
+			_apply_upgrade(_upgrade_choices[i]); return
