@@ -49,14 +49,14 @@ func _draw_swarm() -> void:
 		var danger_alpha := 0.28 if GameState.buff_wolf else 0.18
 		draw_arc(Vector2(s["x"], s["y"]), s["r"], 0.0, TAU, 32, Color(Config.C_DANGER.r, Config.C_DANGER.g, Config.C_DANGER.b, danger_alpha), 1.5)
 		for i in 6:
-			var angle := _time * s["orbit"] * 0.06 + i * TAU / 6.0 + s["phase"]
+			var angle: float = _time * float(s["orbit"]) * 0.06 + i * TAU / 6.0 + float(s["phase"])
 			draw_circle(Vector2(s["x"] + cos(angle) * s["r"] * 0.7, s["y"] + sin(angle) * s["r"] * 0.7), 2.5, Color(Config.C_COPPER.r, Config.C_COPPER.g, Config.C_COPPER.b, alpha + 0.2))
 
 func _draw_orbs() -> void:
 	for orb in level_mgr.orbs:
 		if orb["taken"]: continue
-		var cx := orb["x"] + 16.0
-		var cy := orb["y"] + 16.0
+		var cx: float = float(orb["x"]) + 16.0
+		var cy: float = float(orb["y"]) + 16.0
 		var pulse := 0.85 + 0.15 * sin(_time * 2.2)
 		draw_circle(Vector2(cx, cy), 10.0 * pulse, Color(Config.C_BLUE.r, Config.C_BLUE.g, Config.C_BLUE.b, 0.82))
 		if GameState.buff_raven:
