@@ -15,6 +15,7 @@ func _draw() -> void:
 	_draw_background()
 	_draw_platforms()
 	_draw_hazards()
+	_draw_drones()
 	_draw_swarm()
 	_draw_orbs()
 	_draw_records()
@@ -51,6 +52,22 @@ func _draw_swarm() -> void:
 		for i in 6:
 			var angle: float = _time * float(s["orbit"]) * 0.06 + i * TAU / 6.0 + float(s["phase"])
 			draw_circle(Vector2(s["x"] + cos(angle) * s["r"] * 0.7, s["y"] + sin(angle) * s["r"] * 0.7), 2.5, Color(Config.C_COPPER.r, Config.C_COPPER.g, Config.C_COPPER.b, alpha + 0.2))
+
+func _draw_drones() -> void:
+	for d in level_mgr.drones:
+		var cx: float = float(d["cx"])
+		var cy: float = float(d["cy"])
+		var w: float = float(d["w"])
+		var h: float = float(d["h"])
+		if d["type"] == "platform":
+			draw_rect(Rect2(cx, cy, w, h), Config.C_DRONE_HELP)
+			draw_line(Vector2(cx, cy), Vector2(cx + w, cy), Color(1, 1, 1, 0.18), 1.5)
+		else:
+			var pulse: float = 0.6 + 0.4 * sin(_time * 3.5 + float(d["phase"]))
+			draw_rect(Rect2(cx, cy, w, h),
+				Color(Config.C_DRONE_HARM.r, Config.C_DRONE_HARM.g, Config.C_DRONE_HARM.b, 0.82))
+			draw_line(Vector2(cx, cy), Vector2(cx + w, cy),
+				Color(Config.C_DANGER.r, Config.C_DANGER.g, Config.C_DANGER.b, pulse * 0.6), 1.0)
 
 func _draw_orbs() -> void:
 	for orb in level_mgr.orbs:

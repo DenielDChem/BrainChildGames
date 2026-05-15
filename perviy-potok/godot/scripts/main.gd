@@ -18,7 +18,7 @@ func _ready() -> void:
 	level_mgr._build_level(0)
 	player.position = Config.LEVEL_STARTS[0]
 	level_mgr.portal_entered.connect(_on_portal_entered)
-	GameState.center_changed.connect(_on_center_changed)
+	GameState.player_died.connect(_on_player_died)
 	GameState.record_found.connect(_on_record_found)
 	GameState.animal_met.connect(_on_animal_met)
 
@@ -48,6 +48,8 @@ func _physics_process(delta: float) -> void:
 	level_mgr.check_record_collect(ps, psize)
 	level_mgr.check_animal_meet(ps, psize)
 	level_mgr.check_portal(ps, psize)
+	level_mgr.check_hazard_damage(ps, psize)
+	level_mgr.check_drone_damage(ps, psize)
 	if GameState.mode == "flight":
 		level_mgr.check_swarm_damage(ps, delta)
 	_update_camera()
@@ -68,10 +70,8 @@ func _on_portal_entered(to_level: int) -> void:
 	player.velocity = Vector2.ZERO
 	hud.show_level_intro(to_level)
 
-func _on_center_changed(value: float) -> void:
-	if value <= 0.0:
-		player.respawn()
-		GameState.heal_center(36.0)
+func _on_player_died() -> void:
+	player.respawn()
 
 func _on_record_found(title: String, text: String) -> void:
 	hud.show_message("%s. %s" % [title, text], 4.2)

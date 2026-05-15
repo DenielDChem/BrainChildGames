@@ -7,18 +7,27 @@ var jump_locked: bool = false
 var cat_jumps: int = 0
 var glow: float = 0.0
 var bear_shield_timer: float = 0.0
+var _flap_held: bool = false
+var invuln: float = 0.0
 
 func _ready() -> void:
 	position = Config.LEVEL_STARTS[GameState.current_level]
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("jump"):
-		jump_buffer = Config.JUMP_BUF
-		jump_locked = false
+		if GameState.mode == "flight":
+			_flap_held = true
+			velocity.y = maxf(velocity.y + Config.FLIGHT_FLAP_IMP, Config.FLIGHT_MAX_UP)
+		else:
+			jump_buffer = Config.JUMP_BUF
+			jump_locked = false
 	if event.is_action_released("jump"):
-		jump_locked = false
+		_flap_held = false
+		if GameState.mode != "flight":
+			jump_locked = false
 
 func _physics_process(delta: float) -> void:
+	invuln = maxf(0.0, invuln - delta)
 	match GameState.mode:
 		"walk":   _update_platformer(delta, Config.JUMP_WALK)
 		"jump":   _update_platformer(delta, Config.JUMP_FLOW)
@@ -56,7 +65,6 @@ func _update_platformer(delta: float, jump_strength: float) -> void:
 			cat_jumps -= 1
 			_perform_jump(jump_strength * 0.88)
 
-	# Shorter jump arc on early release
 	if velocity.y < 0.0 and not Input.is_action_pressed("jump"):
 		velocity.y += Config.GRAVITY * 0.55 * delta
 
@@ -71,24 +79,20 @@ func _perform_jump(strength: float) -> void:
 	coyote_time = 0.0
 
 func _update_flight(delta: float) -> void:
-	var slow := Input.is_action_pressed("slow")
-
-	velocity.x = Config.FLIGHT_BASE_VX
 	if Input.is_action_pressed("move_left"):
-		velocity.x -= Config.FLIGHT_SIDE
-	if Input.is_action_pressed("move_right"):
-		velocity.x += Config.FLIGHT_SIDE
-
-	if slow:
-		velocity.x *= 0.78
-		velocity.y *= 0.98
-		glow = lerpf(glow, 1.0, 0.1 * delta * 60.0)
+		velocity.x = lerpf(velocity.x, -Config.FLIGHT_SIDE, 8.0 * delta)
+		facing = -1
+	elif Input.is_action_pressed("move_right"):
+		velocity.x = lerpf(velocity.x, Config.FLIGHT_SIDE, 8.0 * delta)
+		facing = 1
 	else:
-		glow = lerpf(glow, 0.0, 0.08 * delta * 60.0)
+		velocity.x = lerpf(velocity.x, 0.0, 6.0 * delta)
 
-	if jump_buffer > 0.0:
-		velocity.y = Config.FLIGHT_FLAP
-		jump_buffer = 0.0
+	if _flap_held:
+		velocity.y += Config.FLIGHT_FLAP_HOLD * delta
+		glow = lerpf(glow, 1.0, 8.0 * delta)
+	else:
+		glow = lerpf(glow, 0.0, 4.0 * delta)
 
 	velocity.y += Config.FLIGHT_GRAVITY * delta
 	velocity.y = clampf(velocity.y, Config.FLIGHT_MAX_UP, Config.FLIGHT_MAX_DOWN)
@@ -100,12 +104,14 @@ func _update_flight(delta: float) -> void:
 
 func _check_fall() -> void:
 	if position.y > Config.WORLD_H + 180.0:
-		GameState.damage_center(Config.CENTER_FALL_LOSS)
+		if invuln <= 0.0:
+			GameState.take_damage()
 		respawn()
 
 func respawn() -> void:
 	position = GameState.checkpoint
 	velocity = Vector2.ZERO
+	invuln = 1.5
 
 func activate_bear_shield() -> void:
 	bear_shield_timer = 2.5

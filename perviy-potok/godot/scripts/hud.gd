@@ -2,7 +2,8 @@ extends CanvasLayer
 
 @onready var orbs_bar: ProgressBar = $Bars/OrbsBar
 @onready var key_bar: ProgressBar = $Bars/KeyBar
-@onready var center_bar: ProgressBar = $Bars/CenterBar
+@onready var hearts_label: Label = $Bars/HeartsLabel
+@onready var shields_label: Label = $Bars/ShieldsLabel
 @onready var msg_label: Label = $MsgLabel
 @onready var level_kicker: Label = $Brand/Kicker
 @onready var level_title: Label = $Brand/Title
@@ -14,9 +15,12 @@ var _msg_timer: float = 0.0
 func _ready() -> void:
 	GameState.orbs_changed.connect(_on_orbs_changed)
 	GameState.key_collected.connect(_on_key_collected)
-	GameState.center_changed.connect(_on_center_changed)
+	GameState.hearts_changed.connect(_on_hearts_changed)
+	GameState.shield_changed.connect(_on_shield_changed)
 	GameState.level_changed.connect(_on_level_changed)
 	_on_level_changed(0)
+	_on_hearts_changed(Config.MAX_HEARTS)
+	_on_shield_changed(0)
 	intro_panel.hide()
 	end_panel.hide()
 
@@ -49,8 +53,17 @@ func _on_orbs_changed(count: int, need: int) -> void:
 func _on_key_collected() -> void:
 	key_bar.value = 1.0
 
-func _on_center_changed(value: float) -> void:
-	center_bar.value = value
+func _on_hearts_changed(h: int) -> void:
+	var t: String = ""
+	for i in h:
+		t += "♥ "
+	hearts_label.text = t.strip_edges()
+
+func _on_shield_changed(s: int) -> void:
+	var t: String = ""
+	for i in s:
+		t += "□ "
+	shields_label.text = t.strip_edges()
 
 func _on_level_changed(lvl: int) -> void:
 	level_kicker.text = Config.LEVEL_KICKERS[lvl]
@@ -58,5 +71,3 @@ func _on_level_changed(lvl: int) -> void:
 	orbs_bar.max_value = Config.LEVEL_NEEDS[lvl]
 	orbs_bar.value = 0
 	key_bar.value = 0
-	center_bar.max_value = Config.CENTER_MAX
-	center_bar.value = Config.CENTER_MAX

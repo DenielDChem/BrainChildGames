@@ -7,9 +7,12 @@ var animals: Array[Dictionary] = []
 var hazards: Array[Dictionary] = []
 var portals: Array[Dictionary] = []
 var swarm_nodes: Array[Dictionary] = []
+var drones: Array[Dictionary] = []
 
 var secret_opened: bool = false
 var portal_phase: float = 0.0
+var _time: float = 0.0
+var _hit_timer: float = 0.0
 
 var _platform_bodies: Array = []
 
@@ -22,9 +25,15 @@ func _build_level(lvl: int) -> void:
 	for body in _platform_bodies:
 		body.queue_free()
 	_platform_bodies.clear()
+	for d in drones:
+		var body: AnimatableBody2D = d.get("body") as AnimatableBody2D
+		if body:
+			body.queue_free()
 	platforms.clear(); orbs.clear(); records.clear()
-	animals.clear(); hazards.clear(); portals.clear(); swarm_nodes.clear()
+	animals.clear(); hazards.clear(); portals.clear()
+	swarm_nodes.clear(); drones.clear()
 	secret_opened = false
+	_hit_timer = 0.0
 	match lvl:
 		0: _build_walk()
 		1: _build_jump()
@@ -32,6 +41,246 @@ func _build_level(lvl: int) -> void:
 	for p in platforms:
 		if not (p["secret"] and not p["open"]):
 			_create_platform_body(p)
+	for d in drones:
+		if d["type"] == "platform":
+			_create_drone_body(d)
+
+func _physics_process(delta: float) -> void:
+	_time += delta
+	_hit_timer = maxf(0.0, _hit_timer - delta)
+	for d in drones:
+		var offset: float = sin(_time * float(d["speed"]) + float(d["phase"])) * float(d["amplitude"])
+		var nx: float = float(d["bx"]) + (offset if d["axis"] == "x" else 0.0)
+		var ny: float = float(d["by"]) + (offset if d["axis"] == "y" else 0.0)
+		d["cx"] = nx
+		d["cy"] = ny
+		if d["type"] == "platform":
+			var body: AnimatableBody2D = d.get("body") as AnimatableBody2D
+			if body:
+				var _c := body.move_and_collide(Vector2(nx, ny) - body.position)
+
+func _process(delta: float) -> void:
+	portal_phase += delta
+	for po in portals:
+		po["phase"] = portal_phase
+
+# ── Level 0: Walk / Metroidvania ────────────────────────────────
+# Bear (shield) → fork: false upper path vs true lower route
+# Fox → secret platforms bridge false path, unlock Orb2
+# Cat → double jump needed to reach Key ledge
+
+func _build_walk() -> void:
+	_plat(-200, 750, 760, 200, "ground")
+
+	# Start ramp — Bear sits here before the fork
+	_plat(580, 695, 130, 22, "earth")
+	_plat(770, 668, 140, 22, "earth")   # Bear
+
+	# FALSE upper branch: visually tempting, hazard at dead end
+	_plat(960, 622, 100, 22, "earth")
+	_plat(1115, 572, 90, 22, "earth")
+	_plat(1255, 518, 80, 22, "earth")   # dead end — hazard blocks
+
+	# TRUE lower route: less obvious, eventually finds Fox
+	_plat(940, 658, 120, 22, "earth")
+	_plat(1140, 638, 125, 22, "earth")
+	_plat(1360, 615, 135, 22, "earth")
+	_plat(1580, 588, 145, 22, "earth")  # Fox
+
+	# SECRET platforms (Fox unlocks): bridge across false-path dead end
+	_plat(1260, 530, 115, 22, "secret", true)
+	_plat(1495, 486, 115, 22, "secret", true)
+	_plat(1730, 442, 115, 22, "secret", true)
+
+	# Mid-game ascent
+	_plat(1820, 560, 140, 22, "earth")
+	_plat(2060, 522, 130, 22, "earth")  # Cat
+	_plat(2315, 480, 120, 22, "earth")
+	_plat(2560, 432, 110, 22, "earth")
+	_plat(2800, 378, 100, 22, "earth")
+	_plat(3035, 322, 100, 22, "earth")
+	_plat(3260, 264, 100, 22, "earth")
+
+	# Key ledge — Cat double-jump required to clear the last gap
+	_plat(3475, 202, 100, 22, "earth")
+
+	_plat(3700, 158, 120, 22, "earth")
+
+	# Hazard at false-path dead end
+	_hazard(1255, 496, 80, 22, "holder")
+
+	# Orbs — 3 needed; Orb2 is Fox-gated via secret platforms
+	_orb(960, 620)
+	_orb(1745, 415)   # on Sec3 — Fox route only
+	_orb(2570, 402)
+
+	_key(3488, 160)
+
+	_record(800, 638, "Медведь-Основа",
+		"Медведь держит рубеж. Щит — не броня: это умение остановиться.")
+	_record(980, 628, "Первый Предел",
+		"Земля поднимает тех, кто не торопится наверх.", "bear")
+	_record(1600, 558, "Лисий обход",
+		"Лиса открывает скрытую тропу. Верхний путь был закрыт — теперь нет.", "fox")
+	_record(2330, 450, "Кот в Вышине",
+		"Кот прыгает туда, где нет правил. Второй прыжок — решение.", "cat")
+
+	_animal(810, 636, "bear", "Медведь", "Медведь даёт 1 щит.", 1)
+	_animal(1615, 555, "fox", "Лиса", "Лиса открывает тайные тропы.", 0)
+	_animal(2095, 490, "cat", "Кот", "Кот даёт второй прыжок.", 0)
+
+	_portal(3890, 50, 220, 720, 1)
+
+# ── Level 1: Jump / Drones ──────────────────────────────────────
+# Narrower platforms, wider gaps; platform drones bridge two gaps
+# Hazard drones patrol three danger zones
+# Raven → orb lines; Fox → secrets; Cat → 2 shields; Wolf → 2 shields
+
+func _build_jump() -> void:
+	_plat(-200, 778, 380, 200, "ground")
+
+	_plat(180, 718, 110, 24, "cloud")   # Raven
+	_plat(370, 682, 100, 24, "cloud")
+	_plat(568, 644, 90, 24, "cloud")
+	# gap — platform drone 1 bridges here
+	_plat(790, 605, 90, 24, "cloud")
+	_plat(988, 564, 90, 24, "cloud")    # Fox
+	_plat(1182, 523, 85, 24, "cloud")
+
+	# Secret platforms (Fox-gated)
+	_plat(1108, 443, 100, 22, "secret", true)
+	_plat(1348, 400, 100, 22, "secret", true)
+	_plat(1588, 357, 100, 22, "secret", true)
+
+	_plat(1398, 480, 85, 24, "cloud")
+	_plat(1596, 438, 85, 24, "cloud")   # Cat
+	_plat(1806, 396, 80, 24, "cloud")
+	_plat(2028, 355, 80, 24, "cloud")
+	# gap — platform drone 2 bridges here
+	_plat(2308, 315, 85, 24, "cloud")   # Wolf
+	_plat(2506, 274, 80, 24, "cloud")
+	_plat(2704, 233, 80, 24, "cloud")
+	_plat(2914, 192, 80, 24, "cloud")
+	_plat(3132, 151, 80, 24, "cloud")
+	_plat(3352, 114, 80, 24, "cloud")
+	_plat(3578, 80, 100, 24, "cloud")
+
+	# Static hazard tile on N platform (punishes careless landing)
+	_hazard(2704, 211, 80, 22, "break")
+
+	# Orbs — 4 needed
+	_orb(180, 680)
+	_orb(568, 606)
+	_orb(1840, 360)
+	_orb(3148, 116)
+
+	_key(3594, 38)
+
+	_record(205, 690, "Поток",
+		"Прыжок — переговоры со средой. Тело знает дальше, чем глаза.")
+	_record(848, 572, "Ворон-Следопыт",
+		"Ворон видит не предмет, а траекторию.", "raven")
+	_record(1414, 448, "Кот и Щит",
+		"Кот прыгает. Два щита — чтобы было место для ошибки.", "cat")
+	_record(2720, 200, "Волчья Сеть",
+		"Волк различает, что движется, а что только кажется опасным.", "wolf")
+
+	_animal(218, 685, "raven", "Ворон", "Зрение Ворона: орбы и записи светятся линиями.", 0)
+	_animal(1026, 531, "fox", "Лиса", "Лиса открывает скрытый верхний путь.", 0)
+	_animal(1634, 404, "cat", "Кот", "Кот даёт второй прыжок и 2 щита.", 2)
+	_animal(2346, 281, "wolf", "Волк", "Волк даёт 2 щита и глушит опасные дроны.", 2)
+
+	# Platform drones (helper — AnimatableBody2D)
+	_drone(679, 622, "platform", "x", 82.0, 1.2)    # bridges C→D gap
+	_drone(2168, 333, "platform", "x", 102.0, 1.4)  # bridges J→K gap
+
+	# Hazard drones
+	_drone(1182, 468, "hazard", "y", 56.0, 1.9)     # vertical at F zone
+	_drone(2506, 240, "hazard", "y", 66.0, 2.1)     # vertical at L zone
+	_drone(2914, 158, "hazard", "x", 88.0, 1.7)     # horizontal at N zone
+
+	_portal(3870, -20, 220, 700, 2)
+
+# ── Level 2: Flight / Bidirectional ─────────────────────────────
+# No platforms. Tap = impulse up, hold = sustained lift, release = fall.
+# Two orbs are LEFT of spawn (x<220) — player must fly back to collect.
+# Swarm zones form corridors; Wolf buff removes them from view.
+
+func _build_flight() -> void:
+	# Orbs — 4 needed out of 6; Orb1-2 are left of spawn at x=220
+	_orb(65, 278)       # far left — backtrack required
+	_orb(168, 462)      # slightly left
+	_orb(698, 258)
+	_orb(1398, 492)
+	_orb(2198, 302)
+	_orb(3098, 456)
+
+	_key(3678, 276)
+
+	_record(452, 582, "Рой",
+		"Рой движется как целое. Держись своего движения.")
+	_record(658, 432, "Волк-Навигатор",
+		"Волк знает сеть. Видеть её — уже не бояться.", "wolf")
+	_record(1802, 532, "Интенсивность",
+		"Не скорость — интенсивность. Частота взмахов определяет высоту.")
+	_record(2582, 412, "Ворон в Небе",
+		"Ворон показывает путь через Рой.", "raven")
+
+	_animal(658, 398, "wolf", "Волк",
+		"Волк отгоняет Рой и даёт 2 щита.", 2)
+	_animal(2542, 368, "raven", "Ворон",
+		"Ворон подсвечивает путь к выходу.", 0)
+
+	# Swarm corridors — pairs create high/low gaps the player threads through
+	_swarm(598, 538, 40, 0.4)
+	_swarm(898, 198, 38, 0.35)
+	_swarm(1298, 558, 45, 0.45)
+	_swarm(1698, 198, 42, 0.4)
+	_swarm(2098, 558, 40, 0.38)
+	_swarm(2498, 248, 44, 0.42)
+	_swarm(2898, 578, 38, 0.36)
+	_swarm(3298, 198, 42, 0.4)
+
+	_portal(3870, 48, 220, 700, 3)
+
+# ── Factories ────────────────────────────────────────────────────
+
+func _plat(x: float, y: float, w: float, h: float, type: String, secret: bool = false) -> void:
+	platforms.append({"x": x, "y": y, "w": w, "h": h, "type": type, "secret": secret, "open": not secret})
+
+func _orb(x: float, y: float) -> void:
+	orbs.append({"x": x, "y": y, "w": 32.0, "h": 32.0, "taken": false})
+
+func _key(x: float, y: float) -> void:
+	records.append({"x": x, "y": y, "w": 42.0, "h": 42.0, "type": "key", "taken": false,
+		"title": "Ключ", "text": "Переход услышал тебя."})
+
+func _record(x: float, y: float, title: String, text: String, animal_kind: String = "") -> void:
+	records.append({"x": x, "y": y, "w": 42.0, "h": 42.0, "type": "record", "taken": false,
+		"title": title, "text": text, "animal": animal_kind})
+
+func _animal(x: float, y: float, kind: String, anim_name: String, desc: String, shields: int = 0) -> void:
+	animals.append({"x": x, "y": y, "kind": kind, "name": anim_name, "desc": desc,
+		"met": false, "shields": shields})
+
+func _hazard(x: float, y: float, w: float, h: float, kind: String) -> void:
+	hazards.append({"x": x, "y": y, "w": w, "h": h, "kind": kind})
+
+func _portal(x: float, y: float, w: float, h: float, to: int) -> void:
+	portals.append({"x": x, "y": y, "w": w, "h": h, "to": to, "phase": 0.0})
+
+func _swarm(x: float, y: float, r: float, danger: float) -> void:
+	swarm_nodes.append({"x": x, "y": y, "r": r, "danger": danger,
+		"orbit": randf_range(10.0, 30.0), "phase": randf_range(0.0, 100.0)})
+
+func _drone(bx: float, by: float, type: String, axis: String, amplitude: float, speed: float) -> void:
+	var w: float = 80.0 if type == "platform" else 52.0
+	var h: float = 14.0 if type == "platform" else 12.0
+	drones.append({"bx": bx, "by": by, "w": w, "h": h, "type": type, "axis": axis,
+		"amplitude": amplitude, "speed": speed, "phase": randf_range(0.0, TAU),
+		"cx": bx, "cy": by, "body": null})
+
+# ── Physics bodies ───────────────────────────────────────────────
 
 func _create_platform_body(p: Dictionary) -> void:
 	var body := StaticBody2D.new()
@@ -45,105 +294,20 @@ func _create_platform_body(p: Dictionary) -> void:
 	add_child(body)
 	_platform_bodies.append(body)
 
-func _build_walk() -> void:
-	_plat(-200, 750, 760, 200, "ground")
-	_plat(420, 660, 260, 28, "earth")
-	_plat(740, 625, 260, 28, "earth")
-	_plat(1060, 590, 280, 28, "earth")
-	_plat(1400, 555, 280, 28, "earth")
-	_plat(1750, 520, 300, 28, "earth")
-	_plat(2110, 490, 300, 28, "earth")
-	_plat(2470, 460, 310, 28, "earth")
-	_plat(2840, 430, 320, 28, "earth")
-	_plat(3210, 400, 320, 28, "earth")
-	_plat(3560, 380, 260, 28, "earth")
-	_plat(3880, 360, 120, 28, "earth")
-	_plat(1670, 480, 250, 22, "secret", true)
-	_plat(1970, 450, 250, 22, "secret", true)
-	_plat(2270, 420, 250, 22, "secret", true)
-	_orb(500, 600); _orb(1140, 530); _orb(1775, 430); _orb(2890, 370); _orb(3620, 320)
-	_key(3910, 300)
-	_record(790, 525, "Первый слух", "Земля ещё держит тебя, но небо уже перестало быть фоном.")
-	_record(1500, 455, "Держатели", "Они называют безопасность неподвижностью.")
-	_record(2310, 350, "Лисий обход", "Короткий путь возникает только после выбора обхода.", "fox")
-	_record(3260, 340, "Медведь-Предел", "Опора — тоже часть восхождения.", "bear")
-	_animal(1110, 508, "bear", "Медведь", "Щит Медведя: Центр получает меньше урона.")
-	_animal(1490, 473, "fox", "Лиса", "Лиса открывает верхний обход: скрытые платформы появляются впереди.")
-	_hazard(2710, 428, 54, 22, "holder")
-	_hazard(3310, 368, 72, 22, "holder")
-	_portal(4010, 145, 220, 520, 1)
+func _create_drone_body(d: Dictionary) -> void:
+	var body := AnimatableBody2D.new()
+	body.sync_to_physics = true
+	var shape := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = Vector2(float(d["w"]), float(d["h"]))
+	shape.shape = rect
+	shape.position = Vector2(float(d["w"]) * 0.5, float(d["h"]) * 0.5)
+	body.add_child(shape)
+	body.position = Vector2(float(d["bx"]), float(d["by"]))
+	add_child(body)
+	d["body"] = body
 
-func _build_jump() -> void:
-	_plat(-200, 770, 560, 200, "ground")
-	_plat(420, 700, 240, 24, "cloud")
-	_plat(720, 660, 250, 24, "cloud")
-	_plat(1030, 620, 260, 24, "cloud")
-	_plat(1340, 580, 270, 24, "cloud")
-	_plat(1670, 540, 280, 24, "cloud")
-	_plat(2010, 500, 300, 24, "cloud")
-	_plat(2360, 460, 300, 24, "cloud")
-	_plat(2710, 425, 320, 24, "cloud")
-	_plat(3070, 390, 320, 24, "cloud")
-	_plat(3430, 360, 290, 24, "cloud")
-	_plat(3780, 340, 120, 24, "cloud")
-	_plat(1860, 485, 210, 22, "secret", true)
-	_plat(2120, 450, 210, 22, "secret", true)
-	_plat(2380, 415, 210, 22, "secret", true)
-	_orb(495, 642); _orb(804, 602); _orb(1115, 562); _orb(2200, 392); _orb(3480, 300)
-	_key(3805, 278)
-	_record(610, 640, "Поток", "Прыжок больше не только мышца. Это переговоры со средой.")
-	_record(1180, 528, "Ворон", "Ворон видит не предмет, а траекторию.", "raven")
-	_record(2230, 360, "Лиса", "Скрытый ход теперь находится выше основного маршрута.", "fox")
-	_record(3475, 280, "Кот", "Кот прыгает туда, где правил ещё нет.", "cat")
-	_animal(1210, 538, "raven", "Ворон", "Зрение Ворона: орбы и записи получают лучи.")
-	_animal(1510, 498, "fox", "Лиса", "Скрытый ход: впереди открывается верхний набор платформ.")
-	_animal(3250, 278, "cat", "Кот", "Кошачий след: открывается второй прыжок.")
-	_hazard(2450, 434, 70, 20, "break")
-	_hazard(3185, 364, 72, 20, "break")
-	_portal(3920, 140, 220, 500, 2)
-
-func _build_flight() -> void:
-	_orb(520, 420); _orb(1030, 330); _orb(1550, 470)
-	_orb(2130, 360); _orb(2770, 450); _orb(3380, 340)
-	_key(3650, 430)
-	_record(740, 540, "Лик Роя", "Он красивый, связный и без выхода.")
-	_record(1320, 250, "Волк", "Волк слышит сеть и знает цену растворения.", "wolf")
-	_record(2360, 530, "Центр", "Центр — это способность остаться отдельной.")
-	_record(3180, 260, "Горизонт", "За 46-й ступенью архив молчит.")
-	_animal(1360, 395, "wolf", "Волк", "Волк отгоняет Рой и делает опасные зоны читаемыми.")
-	_animal(3150, 520, "raven", "Ворон", "Последнее зрение: выход подсвечивается.")
-	_swarm(850, 585, 36, 0.45); _swarm(1230, 605, 34, 0.44); _swarm(1700, 610, 42, 0.55)
-	_swarm(2050, 585, 34, 0.45); _swarm(2480, 610, 45, 0.58)
-	_swarm(2920, 590, 38, 0.48); _swarm(3300, 610, 42, 0.55)
-	_portal(3890, 170, 260, 560, 3)
-
-# ── Factories ──────────────────────────────────────────────────
-
-func _plat(x: float, y: float, w: float, h: float, type: String, secret: bool = false) -> void:
-	platforms.append({"x": x, "y": y, "w": w, "h": h, "type": type, "secret": secret, "open": not secret})
-
-func _orb(x: float, y: float) -> void:
-	orbs.append({"x": x, "y": y, "w": 32.0, "h": 32.0, "taken": false})
-
-func _key(x: float, y: float) -> void:
-	records.append({"x": x, "y": y, "w": 42.0, "h": 42.0, "type": "key", "taken": false, "title": "Ключ", "text": "Переход услышал тебя."})
-
-func _record(x: float, y: float, title: String, text: String, animal_kind: String = "") -> void:
-	records.append({"x": x, "y": y, "w": 42.0, "h": 42.0, "type": "record", "taken": false, "title": title, "text": text, "animal": animal_kind})
-
-func _animal(x: float, y: float, kind: String, anim_name: String, desc: String) -> void:
-	animals.append({"x": x, "y": y, "kind": kind, "name": anim_name, "desc": desc, "met": false})
-
-func _hazard(x: float, y: float, w: float, h: float, kind: String) -> void:
-	hazards.append({"x": x, "y": y, "w": w, "h": h, "kind": kind})
-
-func _portal(x: float, y: float, w: float, h: float, to: int) -> void:
-	portals.append({"x": x, "y": y, "w": w, "h": h, "to": to, "phase": 0.0})
-
-func _swarm(x: float, y: float, r: float, danger: float) -> void:
-	swarm_nodes.append({"x": x, "y": y, "r": r, "danger": danger, "orbit": randf_range(10.0, 30.0), "phase": randf_range(0.0, 100.0)})
-
-# ── Queries ────────────────────────────────────────────────────
+# ── Queries ──────────────────────────────────────────────────────
 
 func open_secret_platforms() -> void:
 	secret_opened = true
@@ -188,6 +352,9 @@ func check_animal_meet(player_pos: Vector2, player_size: Vector2) -> void:
 			GameState.meet_animal(a["kind"], a["name"], a["desc"])
 			if a["kind"] == "fox":
 				open_secret_platforms()
+			var shield_amount: int = int(a.get("shields", 0))
+			if shield_amount > 0:
+				GameState.gain_shield(shield_amount)
 
 func check_portal(player_pos: Vector2, player_size: Vector2) -> void:
 	if not GameState.portal_unlocked(): return
@@ -197,15 +364,36 @@ func check_portal(player_pos: Vector2, player_size: Vector2) -> void:
 			portal_entered.emit(po["to"])
 			break
 
-func check_swarm_damage(player_pos: Vector2, delta: float) -> void:
+func check_swarm_damage(player_pos: Vector2, _delta: float) -> void:
 	if GameState.buff_wolf: return
-	var px := player_pos.x + 16.0
-	var py := player_pos.y + 16.0
+	if _hit_timer > 0.0: return
+	var px: float = player_pos.x + 16.0
+	var py: float = player_pos.y + 16.0
 	for s in swarm_nodes:
-		if Vector2(px - s["x"], py - s["y"]).length() < s["r"]:
-			GameState.damage_center(s["danger"] * delta * 60.0)
+		if Vector2(px - float(s["x"]), py - float(s["y"])).length() < float(s["r"]):
+			GameState.take_damage()
+			_hit_timer = 1.5
+			return
 
-func _process(delta: float) -> void:
-	portal_phase += delta
-	for po in portals:
-		po["phase"] = portal_phase
+func check_hazard_damage(player_pos: Vector2, player_size: Vector2) -> void:
+	if _hit_timer > 0.0: return
+	var pr := Rect2(player_pos, player_size)
+	for h in hazards:
+		var hr := Rect2(Vector2(float(h["x"]), float(h["y"])), Vector2(float(h["w"]), float(h["h"])))
+		if pr.intersects(hr):
+			GameState.take_damage()
+			_hit_timer = 1.5
+			return
+
+func check_drone_damage(player_pos: Vector2, player_size: Vector2) -> void:
+	if _hit_timer > 0.0: return
+	var pr := Rect2(player_pos, player_size)
+	for d in drones:
+		if d["type"] != "hazard": continue
+		var cx: float = float(d["cx"])
+		var cy: float = float(d["cy"])
+		var dr := Rect2(Vector2(cx, cy), Vector2(float(d["w"]), float(d["h"])))
+		if pr.intersects(dr):
+			GameState.take_damage()
+			_hit_timer = 1.5
+			return

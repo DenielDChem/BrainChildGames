@@ -62,10 +62,15 @@ custom_minimum_size = Vector2(180, 5)
 max_value = 1.0
 value = 0.0
 
-[node name="CenterBar" type="ProgressBar" parent="HUD/Bars"]
-custom_minimum_size = Vector2(180, 5)
-max_value = 100.0
-value = 100.0
+[node name="HeartsLabel" type="Label" parent="HUD/Bars"]
+custom_minimum_size = Vector2(180, 20)
+text = "♥ ♥ ♥"
+theme_override_font_sizes/font_size = 16
+
+[node name="ShieldsLabel" type="Label" parent="HUD/Bars"]
+custom_minimum_size = Vector2(180, 20)
+text = ""
+theme_override_font_sizes/font_size = 14
 
 [node name="MsgLabel" type="Label" parent="HUD"]
 offset_left = 300.0
