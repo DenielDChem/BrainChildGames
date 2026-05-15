@@ -65,139 +65,177 @@ func _process(delta: float) -> void:
 		po["phase"] = portal_phase
 
 # ── Level 0: Walk / Metroidvania ────────────────────────────────
-# Bear (shield) → fork: false upper path vs true lower route
-# Fox → secret platforms bridge false path, unlock Orb2
-# Cat → double jump needed to reach Key ledge
+# REDESIGN NOTES (vs original):
+#   - Reduced from 21 platforms → 14 (11 visible + 3 secret)
+#   - False path: single narrow platform + hazard on top (was 3-platform branch)
+#     Both fork options share x=1060 — player reads height difference, not position
+#   - True path: single wider platform B1 (was 4 platforms to Fox)
+#   - Fox gap 280px gives first real "air time" moment (was 90px hops)
+#   - Mid-game compressed to 2 platforms D1+E1 (was 7 steps)
+#   - Cat gate: rise=230px > max single jump 204px; Cat double=363px — clean hard gate
+#   - Orb placement: 1 on false path (temptation), 1 Fox-gated on S3, 1 post-Cat on F1
 
 func _build_walk() -> void:
+	# Ground: extends from off-screen left to x=560
 	_plat(-200, 750, 760, 200, "ground")
 
-	# Start ramp — Bear sits here before the fork
-	_plat(580, 695, 130, 22, "earth")
-	_plat(770, 668, 140, 22, "earth")   # Bear
+	# ── ACT 1: ENTRY (x=580–960) ──────────────────────────────────────────
+	# Two gentle steps teach ground-level platforming before any real gap.
+	# Wide platforms, modest rises — establishes comfort zone before the fork.
+	_plat(580, 700, 130, 22, "earth")   # A1 — first step from ground; gap=20px, rise=50px
+	_plat(820, 665, 140, 22, "earth")   # A2 — Bear lives here; gap=110px, rise=35px
 
-	# FALSE upper branch: visually tempting, hazard at dead end
-	_plat(960, 622, 100, 22, "earth")
-	_plat(1115, 572, 90, 22, "earth")
-	_plat(1255, 518, 80, 22, "earth")   # dead end — hazard blocks
-
-	# TRUE lower route: less obvious, eventually finds Fox
-	_plat(940, 658, 120, 22, "earth")
-	_plat(1140, 638, 125, 22, "earth")
-	_plat(1360, 615, 135, 22, "earth")
-	_plat(1580, 588, 145, 22, "earth")  # Fox
-
-	# SECRET platforms (Fox unlocks): bridge across false-path dead end
-	_plat(1260, 530, 115, 22, "secret", true)
-	_plat(1495, 486, 115, 22, "secret", true)
-	_plat(1730, 442, 115, 22, "secret", true)
-
-	# Mid-game ascent
-	_plat(1820, 560, 140, 22, "earth")
-	_plat(2060, 522, 130, 22, "earth")  # Cat
-	_plat(2315, 480, 120, 22, "earth")
-	_plat(2560, 432, 110, 22, "earth")
-	_plat(2800, 378, 100, 22, "earth")
-	_plat(3035, 322, 100, 22, "earth")
-	_plat(3260, 264, 100, 22, "earth")
-
-	# Key ledge — Cat double-jump required to clear the last gap
-	_plat(3475, 202, 100, 22, "earth")
-
-	_plat(3700, 158, 120, 22, "earth")
-
-	# Hazard at false-path dead end
-	_hazard(1255, 496, 80, 22, "holder")
-
-	# Orbs — 3 needed; Orb2 is Fox-gated via secret platforms
-	_orb(960, 620)
-	_orb(1745, 415)   # on Sec3 — Fox route only
-	_orb(2570, 402)
-
-	_key(3488, 160)
-
-	_record(800, 638, "Медведь-Основа",
+	_animal(858, 633, "bear", "Медведь", "Медведь даёт 1 щит.", 1)
+	_record(858, 633, "Медведь-Основа",
 		"Медведь держит рубеж. Щит — не броня: это умение остановиться.")
-	_record(980, 628, "Первый Предел",
-		"Земля поднимает тех, кто не торопится наверх.", "bear")
-	_record(1600, 558, "Лисий обход",
+
+	# ── FORK: FALSE PATH vs TRUE PATH ─────────────────────────────────────
+	# Both options start at the same x (1060) from A2's right edge (960).
+	# FALSE PATH: 70px HIGHER than A2 — player sees it first (higher = more visible).
+	#   Narrow width (80px) signals instability. Hazard tile crowns the surface.
+	#   No exit platform beyond. Player learns: narrow+high+red = danger.
+	# TRUE PATH: 35px LOWER than A2 — player must deliberately look downward.
+	#   Wider width (140px) signals safety. Leads to the 280px gap toward Fox.
+	_plat(1060, 595, 80, 22, "earth")   # FALSE — narrow, high, hazard on top
+	_plat(1060, 700, 140, 22, "earth")  # TRUE  — wider, lower, same x as false
+
+	_hazard(1060, 573, 80, 22, "holder")  # crowns false platform — visible red signal
+	_orb(1085, 539)                        # Orb 1 — tempts player onto false path
+
+	# ── ACT 1 RESOLUTION: FOX ─────────────────────────────────────────────
+	# True path's first committed gap: 280px. Player is airborne ~0.45 seconds.
+	# Fox platform is wider (160px) — visual reward for navigating to it.
+	_plat(1480, 665, 160, 22, "earth")  # C1 — Fox; gap=280px from B1 right=1200
+
+	_animal(1540, 633, "fox", "Лиса", "Лиса открывает тайные тропы.", 0)
+	_record(1540, 633, "Лисий обход",
 		"Лиса открывает скрытую тропу. Верхний путь был закрыт — теперь нет.", "fox")
-	_record(2330, 450, "Кот в Вышине",
+
+	# ── ACT 2: FOX SECRETS — UPPER EXPRESS LANE ───────────────────────────
+	# Secrets appear directly above Fox's platform the moment Fox is met.
+	# S1 is visible immediately (135px above C1 surface) — dramatic reveal.
+	# Three platforms form a faster elevated route across Act 2.
+	# Orb 2 lives only on S3 — Fox route is the sole collection path.
+	_plat(1490, 530, 120, 22, "secret", true)  # S1 — 135px above C1, appears at Fox
+	_plat(1830, 478, 120, 22, "secret", true)  # S2 — gap=220px from S1, rise=52px
+	_plat(2170, 426, 120, 22, "secret", true)  # S3 — gap=220px from S2, rise=52px
+
+	_orb(2195, 370)   # Orb 2 — Fox-gated, on S3
+
+	# ── ACT 2: TRUE GROUND PATH — TOWARD CAT ──────────────────────────────
+	# D1 gives breathing room after Fox (190px gap).
+	# E1 clusters with D1 to feel like a "room" — Cat encounter here.
+	_plat(1830, 640, 140, 22, "earth")  # D1 — gap=190px from C1 right=1640, rise=25px
+	_plat(2120, 618, 160, 22, "earth")  # E1 — Cat here; gap=150px from D1 right=1970
+
+	_animal(2172, 586, "cat", "Кот", "Кот даёт второй прыжок.", 0)
+	_record(2172, 586, "Кот в Вышине",
 		"Кот прыгает туда, где нет правил. Второй прыжок — решение.", "cat")
 
-	_animal(810, 636, "bear", "Медведь", "Медведь даёт 1 щит.", 1)
-	_animal(1615, 555, "fox", "Лиса", "Лиса открывает тайные тропы.", 0)
-	_animal(2095, 490, "cat", "Кот", "Кот даёт второй прыжок.", 0)
+	# ── ACT 3: ENDGAME ASCENT ─────────────────────────────────────────────
+	# Two gaps widen post-Cat: 260px then 240px. Player uses Cat casually —
+	# building muscle memory before the deliberate Cat-gated KeyLedge.
+	_plat(2540, 575, 120, 22, "earth")  # F1 — gap=260px from E1 right=2280, rise=43px
+	_plat(2900, 525, 120, 22, "earth")  # G1 — gap=240px from F1 right=2660, rise=50px
+
+	_orb(2560, 519)   # Orb 3 — floats above F1; reward for the first wide gap
+
+	# KEY LEDGE: hard Cat gate — rise=230px, single jump max=204px (FAIL), Cat=363px (PASS)
+	# Horizontal gap from G1 right edge (3020) is only 130px — gate is purely vertical.
+	# Player who jumps without Cat hits wall 100px short and falls. Gate reads immediately.
+	_plat(3150, 295, 100, 22, "earth")  # KeyLedge — Cat double jump required
+	_plat(3390, 240, 100, 22, "earth")  # PortalLedge — stepping stone to portal
+
+	_key(3168, 253)
 
 	_portal(3890, 50, 220, 720, 1)
 
 # ── Level 1: Jump / Drones ──────────────────────────────────────
-# Narrower platforms, wider gaps; platform drones bridge two gaps
-# Hazard drones patrol three danger zones
-# Raven → orb lines; Fox → secrets; Cat → 2 shields; Wolf → 2 shields
+# REDESIGN NOTES (vs original):
+#   - Reduced from 20 platforms → 15 (12 visible + 3 secret)
+#   - Drones: 2 platform + 2 hazard (was 2 platform + 3 hazard)
+#   - Each drone pair (platform+hazard) creates a clear risk/reward choice:
+#     • Brave it directly (hazard threat) or use the platform drone (safe)
+#   - Fox encounter earlier (platform D at x=1100) — secrets reveal mid-level
+#   - Cat+Wolf now clearly separate encounters, not stacked
+#   - Endgame: 3 clean steps I→J→K (no redundant micro-steps from original)
+#   - Orbs: 1 at Raven (entry), 1 Fox-gated on S3, 1 near Cat on F, 1 near Key on K
 
 func _build_jump() -> void:
 	_plat(-200, 778, 380, 200, "ground")
 
-	_plat(180, 718, 110, 24, "cloud")   # Raven
-	_plat(370, 682, 100, 24, "cloud")
-	_plat(568, 644, 90, 24, "cloud")
-	# gap — platform drone 1 bridges here
-	_plat(790, 605, 90, 24, "cloud")
-	_plat(988, 564, 90, 24, "cloud")    # Fox
-	_plat(1182, 523, 85, 24, "cloud")
+	# ── ENTRY: RAVEN ───────────────────────────────────────────────────────
+	# Raven on first platform — buff (lit orbs/records) active from the start.
+	# Orb 1 placed on/near the platform so player collects it meeting Raven.
+	_plat(180, 718, 110, 24, "cloud")    # A — Raven; gap=0 (ground ledge)
 
-	# Secret platforms (Fox-gated)
-	_plat(1108, 443, 100, 22, "secret", true)
-	_plat(1348, 400, 100, 22, "secret", true)
-	_plat(1588, 357, 100, 22, "secret", true)
-
-	_plat(1398, 480, 85, 24, "cloud")
-	_plat(1596, 438, 85, 24, "cloud")   # Cat
-	_plat(1806, 396, 80, 24, "cloud")
-	_plat(2028, 355, 80, 24, "cloud")
-	# gap — platform drone 2 bridges here
-	_plat(2308, 315, 85, 24, "cloud")   # Wolf
-	_plat(2506, 274, 80, 24, "cloud")
-	_plat(2704, 233, 80, 24, "cloud")
-	_plat(2914, 192, 80, 24, "cloud")
-	_plat(3132, 151, 80, 24, "cloud")
-	_plat(3352, 114, 80, 24, "cloud")
-	_plat(3578, 80, 100, 24, "cloud")
-
-	# Static hazard tile on N platform (punishes careless landing)
-	_hazard(2704, 211, 80, 22, "break")
-
-	# Orbs — 4 needed
-	_orb(180, 680)
-	_orb(568, 606)
-	_orb(1840, 360)
-	_orb(3148, 116)
-
-	_key(3594, 38)
-
-	_record(205, 690, "Поток",
+	_animal(218, 686, "raven", "Ворон", "Зрение Ворона: орбы и записи светятся линиями.", 0)
+	_record(218, 686, "Поток",
 		"Прыжок — переговоры со средой. Тело знает дальше, чем глаза.")
-	_record(848, 572, "Ворон-Следопыт",
+	_orb(205, 662)   # Orb 1 — floats above Raven platform
+
+	# ── FIRST HAZARD ZONE: B → C ──────────────────────────────────────────
+	# B is a calm ledge. Between B (right edge x=520) and C (left x=860)
+	# is a 340px gap occupied by a hazard drone (vertical patrol).
+	# Platform drone oscillates horizontally across the gap — safe stepping stone.
+	# Direct jump is physically possible but hazard drone punishes careless flight.
+	_plat(430, 680, 90, 24, "cloud")     # B — gap=120px from A right=290, rise=38px
+
+	_drone(680, 656, "platform", "x", 85.0, 0.9)   # platform drone 1: slow+steady = safe
+	_drone(690, 610, "hazard", "y", 46.0, 2.6)     # hazard drone 1: fast+erratic = danger
+
+	_plat(860, 636, 90, 24, "cloud")     # C — reachable via drone; gap=340px from B direct
+
+	# ── FOX ENCOUNTER ─────────────────────────────────────────────────────
+	_plat(1100, 594, 100, 24, "cloud")   # D — Fox; gap=150px from C right=950, rise=42px
+
+	_animal(1138, 562, "fox", "Лиса", "Лиса открывает скрытый верхний путь.", 0)
+	_record(1138, 562, "Ворон-Следопыт",
 		"Ворон видит не предмет, а траекторию.", "raven")
-	_record(1414, 448, "Кот и Щит",
+
+	# Secrets appear above D the moment Fox is met.
+	# S1 hovers 116px above D's surface — immediately visible.
+	# S3 carries Orb 2 — Fox route is the only way to collect it.
+	_plat(1100, 478, 100, 22, "secret", true)   # S1 — directly above Fox, 116px up
+	_plat(1480, 418, 100, 22, "secret", true)   # S2 — gap=280px from S1, rise=60px
+	_plat(1860, 358, 100, 22, "secret", true)   # S3 — gap=280px from S2, rise=60px
+
+	_orb(1885, 302)   # Orb 2 — Fox-gated, floats above S3
+
+	# ── ACT 2: POST-FOX TO CAT ────────────────────────────────────────────
+	# Widening rhythm: 180px → 230px. Player gains rhythm confidence.
+	_plat(1380, 550, 90, 24, "cloud")    # E — gap=180px from D right=1200, rise=44px
+	_plat(1700, 506, 100, 24, "cloud")   # F — Cat+2shields; gap=230px from E right=1470
+
+	_orb(1718, 450)   # Orb 3 — floats above F, near Cat
+	_animal(1738, 474, "cat", "Кот", "Кот даёт второй прыжок и 2 щита.", 2)
+	_record(1738, 474, "Кот и Щит",
 		"Кот прыгает. Два щита — чтобы было место для ошибки.", "cat")
-	_record(2720, 200, "Волчья Сеть",
+
+	# ── SECOND HAZARD ZONE: G → H ─────────────────────────────────────────
+	# Same structure as B→C but gap is wider (290px) and hazard amplitude larger.
+	# Wolf's swarm-immunity buff does NOT remove hazard drones — player must still
+	# time the platform drone correctly. Consequence feels earned.
+	_plat(2060, 462, 90, 24, "cloud")    # G — gap=260px from F right=1800, rise=44px
+
+	_drone(2275, 440, "platform", "x", 90.0, 0.9)  # platform drone 2: slow+steady = safe
+	_drone(2285, 398, "hazard", "y", 52.0, 2.8)    # hazard drone 2: fast+erratic = danger
+
+	_plat(2440, 414, 100, 24, "cloud")   # H — Wolf+2shields; gap=290px from G via drone
+
+	_animal(2478, 382, "wolf", "Волк", "Волк даёт 2 щита и глушит опасные дроны.", 2)
+	_record(2478, 382, "Волчья Сеть",
 		"Волк различает, что движется, а что только кажется опасным.", "wolf")
 
-	_animal(218, 685, "raven", "Ворон", "Зрение Ворона: орбы и записи светятся линиями.", 0)
-	_animal(1026, 531, "fox", "Лиса", "Лиса открывает скрытый верхний путь.", 0)
-	_animal(1634, 404, "cat", "Кот", "Кот даёт второй прыжок и 2 щита.", 2)
-	_animal(2346, 281, "wolf", "Волк", "Волк даёт 2 щита и глушит опасные дроны.", 2)
+	# ── ENDGAME ASCENT ────────────────────────────────────────────────────
+	# Post-Wolf: hazard drones silenced, clean rhythm to Key and Portal.
+	# Three steps with 210–260px gaps — player in full flow state.
+	_plat(2800, 370, 90, 24, "cloud")    # I — gap=260px from H right=2540, rise=44px
+	_plat(3100, 322, 90, 24, "cloud")    # J — gap=210px from I right=2890, rise=48px
+	_plat(3420, 272, 90, 24, "cloud")    # K — Key here; gap=230px from J right=3190
 
-	# Platform drones (helper — AnimatableBody2D)
-	_drone(679, 622, "platform", "x", 82.0, 1.2)    # bridges C→D gap
-	_drone(2168, 333, "platform", "x", 102.0, 1.4)  # bridges J→K gap
-
-	# Hazard drones
-	_drone(1182, 468, "hazard", "y", 56.0, 1.9)     # vertical at F zone
-	_drone(2506, 240, "hazard", "y", 66.0, 2.1)     # vertical at L zone
-	_drone(2914, 158, "hazard", "x", 88.0, 1.7)     # horizontal at N zone
+	_orb(3438, 216)   # Orb 4 — floats above K, near Key
+	_key(3438, 230)
 
 	_portal(3870, -20, 220, 700, 2)
 
