@@ -774,39 +774,37 @@ function placeOnShelf(sh) {
   updateHUD();
 }
 
-function mergeCores(sh) {
-  ['white','black','gray'].forEach(col=>{
-    const same=sh.cores.filter(c=>c.col===col);
-    if(same.length>=2){
-      const totalStr=same.reduce((s,c)=>s+c.strength,0);
-      sh.cores=sh.cores.filter(c=>c.col!==col);
-      sh.cores.push({col,src:sh.id,id:'c'+uid++,strength:totalStr});
-      notify(`Слияние! ${COLORS[col].toUpperCase()} Ядро×${totalStr} на «${sh.name}». −${totalStr*3}% Адапт.`,col);
-    }
-  });
-}
-
 function checkThreshold(sh) {
-  while (sh.marbs.length+sh.cores.length>=sh.max_slots && sh.marbs.length>=8) {
+  if (sh.marbs.length+sh.cores.length < sh.max_slots) return;
+
+  const totalStr = ()=>allCores().reduce((s,c)=>s+c.strength,0);
+
+  if (sh.cores.length > sh.marbs.length) {
+    // СЛИЯНИЕ: ядер больше, чем шаров — сливаем доминантный цвет ядер
+    const ct={white:0,black:0,gray:0};
+    sh.cores.forEach(c=>ct[c.col]++);
+    const dom=ct.white>=ct.black&&ct.white>=ct.gray?'white':ct.black>=ct.gray?'black':'gray';
+    const same=sh.cores.filter(c=>c.col===dom);
+    const str=same.reduce((s,c)=>s+c.strength,0);
+    sh.cores=sh.cores.filter(c=>c.col!==dom);
+    sh.cores.push({col:dom,src:sh.id,id:'c'+uid++,strength:str});
+    G.adapt=Math.max(0.5,1.0-totalStr()*0.03);
+    unlockJournal(dom,true);
+    notify(`Слияние! ${COLORS[dom].toUpperCase()} Ядро×${str} на «${sh.name}». −${str*3}% Адапт.`,dom);
+  } else {
+    // КОМПРЕССИЯ: шаров ≥ ядер — берём ВСЕ доминантные шары → 1 ядро
     const w=sh.marbs.filter(m=>m.col==='white').length;
     const b=sh.marbs.filter(m=>m.col==='black').length;
     const g=sh.marbs.filter(m=>m.col==='gray').length;
     const dom=w>=b&&w>=g?'white':b>=g?'black':'gray';
-
-    let rem=0; const keep=[];
-    for(const m of sh.marbs){ if(rem<8&&m.col===dom) rem++; else keep.push(m); }
-    if(rem<8){ let need=8-rem; const extra=[]; for(const m of keep){ if(need-->0) rem++; else extra.push(m); } sh.marbs=extra; }
-    else sh.marbs=keep;
-
-    sh.cores.push({col:dom, src:sh.id, id:'c'+uid++, strength:1});
-    mergeCores(sh);
-    const totalStr=allCores().reduce((s,c)=>s+c.strength,0);
-    G.adapt=Math.max(0.5, 1.0-totalStr*0.03);
-    unlockJournal(dom, true);
-    const merged=sh.cores.find(c=>c.col===dom);
-    const str=merged?merged.strength:1;
-    notify(`Полка заполнена! ${COLORS[dom].toUpperCase()} Ядро×${str} на «${sh.name}». −${str*3}% Адапт.`, dom);
+    const domCnt=w>=b&&w>=g?w:b>=g?b:g;
+    sh.marbs=sh.marbs.filter(m=>m.col!==dom);
+    sh.cores.push({col:dom,src:sh.id,id:'c'+uid++,strength:domCnt});
+    G.adapt=Math.max(0.5,1.0-totalStr()*0.03);
+    unlockJournal(dom,true);
+    notify(`Полка заполнена! ${COLORS[dom].toUpperCase()}×${domCnt} → Ядро на «${sh.name}». −${domCnt*3}% Адапт.`,dom);
   }
+
   const cnt=sh.marbs.length;
   if(cnt===5){ notify(`Порог 5 на «${sh.name}». +5% к ${COLORS[shelfDom(sh)]}.`); unlockJournal(shelfDom(sh),false); }
   else if(cnt===3){ notify(`Порог 3 на «${sh.name}». +3% к ${COLORS[shelfDom(sh)]}.`); unlockJournal(shelfDom(sh),false); }
