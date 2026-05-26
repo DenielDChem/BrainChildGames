@@ -5,48 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Знание как Вес</title>
 <style>
-/* ===== RESET & ROOT ===== */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg-deep:#080811;
-  --bg-mid:#0f0f1e;
-  --bg-light:#181828;
-  --text:#d4c5a9;
-  --text-dim:#6a5a45;
-  --accent:#c9a96e;
-  --accent-dim:#4a3820;
-  --shelf:#1c1810;
-  --reserve:#0c0c1c;
-  --m-white:#e0d8c8;
-  --m-black:#2a2040;
-  --m-gray:#686878;
-  --gw:rgba(224,216,200,.45);
-  --gb:rgba(80,60,160,.5);
-  --gg:rgba(100,120,140,.45);
+  --bg-deep:#080811;--bg-mid:#0f0f1e;--text:#d4c5a9;--text-dim:#6a5a45;
+  --accent:#c9a96e;--accent-dim:#4a3820;--shelf:#1c1810;--reserve:#0c0c1c;
+  --gw:rgba(224,216,200,.45);--gb:rgba(80,60,160,.5);--gg:rgba(100,120,140,.45);
 }
-body{background:var(--bg-deep);color:var(--text);font-family:'Georgia',serif;min-height:100vh;overflow:hidden;position:relative}
+body{background:var(--bg-deep);color:var(--text);font-family:'Georgia',serif;min-height:100vh;overflow:hidden}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at 50% 60%,rgba(100,80,40,.07) 0%,transparent 65%);pointer-events:none}
-
-/* ===== SCREENS ===== */
 .screen{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;padding:20px;overflow-y:auto;padding-top:60px}
 .screen.active{display:flex}
 #start-screen{padding-top:0;justify-content:center;text-align:center}
-
-/* ===== TYPE ===== */
 h1{font-size:2.4rem;color:var(--accent);text-shadow:0 0 40px rgba(201,169,110,.25);letter-spacing:.25em;margin-bottom:.4rem}
 h2{font-size:1.3rem;color:var(--accent);letter-spacing:.12em;margin-bottom:12px}
 h3{font-size:.78rem;color:var(--text-dim);letter-spacing:.18em;text-transform:uppercase;margin-bottom:8px}
 p.sub{color:var(--text-dim);font-style:italic;font-size:.95rem;margin-bottom:1.8rem;line-height:1.7;max-width:380px}
-
-/* ===== BUTTONS ===== */
 button{background:transparent;border:1px solid var(--accent-dim);color:var(--accent);padding:9px 22px;font-family:inherit;font-size:.85rem;letter-spacing:.1em;cursor:pointer;transition:all .25s}
 button:hover{border-color:var(--accent);background:rgba(201,169,110,.07);box-shadow:0 0 18px rgba(201,169,110,.18)}
 button:active{transform:scale(.98)}
 button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .btn-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:12px}
 .btn-big{font-size:1rem;padding:12px 36px;letter-spacing:.18em;border-color:var(--accent)}
-
-/* ===== MARBLES ===== */
+/* MARBLES */
 .marble{width:34px;height:34px;border-radius:50%;cursor:pointer;position:relative;flex-shrink:0;transition:transform .2s,box-shadow .2s}
 .marble::before{content:'';position:absolute;top:22%;left:22%;width:28%;height:28%;border-radius:50%;background:rgba(255,255,255,.55);filter:blur(2px)}
 .marble.white{background:radial-gradient(circle at 35% 35%,#f3f0e8,#bab0a0);box-shadow:0 2px 8px rgba(0,0,0,.5),0 0 10px var(--gw)}
@@ -57,20 +37,18 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .marble.white.selected{box-shadow:0 0 22px rgba(220,215,200,.9)}
 .marble.black.selected{box-shadow:0 0 22px rgba(110,90,210,.9)}
 .marble.gray.selected{box-shadow:0 0 22px rgba(110,150,170,.9)}
-.marble.sm{width:26px;height:26px}
-.marble.xs{width:18px;height:18px;cursor:default}
+.marble.sm{width:26px;height:26px}.marble.xs{width:18px;height:18px;cursor:default}
 .marble.xs::before{display:none}
-
-/* ===== CORE ORB ===== */
-.core{width:34px;height:34px;border-radius:50%;flex-shrink:0;cursor:default}
+/* CORES */
+.core{border-radius:50%;flex-shrink:0;cursor:default}
+.core.lg{width:34px;height:34px}.core.sm{width:26px;height:26px}
 .core.white{background:radial-gradient(circle at 35% 35%,#fff,#d8d0c0);box-shadow:0 0 18px rgba(230,220,200,.8),0 0 35px rgba(220,210,190,.35);animation:pw 2.2s ease-in-out infinite}
 .core.black{background:radial-gradient(circle at 35% 35%,#6050a0,#08080e);box-shadow:0 0 18px rgba(100,80,190,.8),0 0 35px rgba(80,60,150,.35);animation:pb 2.2s ease-in-out infinite}
 .core.gray{background:radial-gradient(circle at 35% 35%,#c0c0d0,#383848);box-shadow:0 0 18px rgba(120,150,170,.8),0 0 35px rgba(100,130,150,.35);animation:pg 2.2s ease-in-out infinite}
 @keyframes pw{0%,100%{box-shadow:0 0 18px rgba(230,220,200,.8),0 0 35px rgba(220,210,190,.35)}50%{box-shadow:0 0 28px rgba(230,220,200,1),0 0 55px rgba(220,210,190,.6)}}
 @keyframes pb{0%,100%{box-shadow:0 0 18px rgba(100,80,190,.8),0 0 35px rgba(80,60,150,.35)}50%{box-shadow:0 0 28px rgba(100,80,190,1),0 0 55px rgba(80,60,150,.6)}}
 @keyframes pg{0%,100%{box-shadow:0 0 18px rgba(120,150,170,.8),0 0 35px rgba(100,130,150,.35)}50%{box-shadow:0 0 28px rgba(120,150,170,1),0 0 55px rgba(100,130,150,.6)}}
-
-/* ===== HUD ===== */
+/* HUD */
 #hud{position:fixed;top:0;left:0;right:0;height:50px;background:rgba(8,8,17,.92);border-bottom:1px solid rgba(201,169,110,.18);display:none;align-items:center;justify-content:space-between;padding:0 16px;z-index:100;backdrop-filter:blur(6px)}
 #hud.on{display:flex}
 .hud-grp{display:flex;align-items:center;gap:7px}
@@ -80,28 +58,20 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .afill{height:100%;border-radius:3px;transition:width .5s,background .5s;background:var(--accent)}
 .rdots{display:flex;gap:2px}
 .rdot{width:7px;height:7px;border-radius:50%;background:rgba(201,169,110,.1);border:1px solid rgba(201,169,110,.22);transition:background .3s}
-.rdot.w{background:var(--m-white);border-color:var(--m-white)}
-.rdot.b{background:#503878;border-color:#7060b0}
-.rdot.g{background:#585868;border-color:#888898}
-.hud-btns{display:flex;gap:5px}
-.hud-btns button{font-size:.68rem;padding:4px 10px}
-
-/* ===== NOTIFICATION ===== */
+.rdot.w{background:#e0d8c8;border-color:#e0d8c8}.rdot.b{background:#503878;border-color:#7060b0}.rdot.g{background:#585868;border-color:#888898}
+.hud-btns{display:flex;gap:5px}.hud-btns button{font-size:.68rem;padding:4px 10px}
+/* NOTIF */
 #notif{position:fixed;top:58px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(10,10,22,.96);border:1px solid rgba(201,169,110,.35);padding:9px 18px;font-size:.8rem;color:var(--text);opacity:0;transition:all .35s;pointer-events:none;z-index:200;text-align:center;max-width:320px;backdrop-filter:blur(5px);line-height:1.4}
 #notif.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* ===== START ===== */
-#start-screen .lore{max-width:360px;text-align:center;color:var(--text-dim);font-style:italic;line-height:1.8;font-size:.88rem;margin-bottom:2rem}
-
-/* ===== EXPEDITION ===== */
+/* EXPEDITION */
 .loc-head{text-align:center;margin-bottom:8px}
-.loc-desc{color:var(--text-dim);font-style:italic;max-width:480px;text-align:center;line-height:1.6;font-size:.9rem;margin-bottom:12px}
+.loc-desc{color:var(--text-dim);font-style:italic;max-width:480px;text-align:center;line-height:1.6;font-size:.9rem;margin-bottom:10px}
 .echo-bar{background:rgba(120,70,50,.28);border:1px solid rgba(200,100,70,.35);padding:10px 20px;text-align:center;color:#c87050;font-style:italic;font-size:.85rem;display:none;max-width:500px;width:100%;margin-bottom:8px}
 .echo-bar.on{display:block}
 .world-rx{background:rgba(10,15,28,.85);border:1px solid rgba(201,169,110,.22);padding:9px 18px;text-align:center;font-size:.82rem;font-style:italic;color:var(--text-dim);display:none;max-width:480px;width:100%;margin-bottom:8px;line-height:1.4}
 .world-rx.on{display:block}
 .actions-grid{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}
-.acard{width:175px;padding:18px 14px;border:1px solid rgba(201,169,110,.18);background:var(--shelf);cursor:pointer;transition:all .28s;text-align:center;position:relative;overflow:hidden}
+.acard{width:175px;padding:16px 14px;border:1px solid rgba(201,169,110,.18);background:var(--shelf);cursor:pointer;transition:all .28s;text-align:center;position:relative;overflow:hidden}
 .acard::after{content:'';position:absolute;inset:0;opacity:0;transition:opacity .3s}
 .acard.wa::after{background:radial-gradient(circle,rgba(200,185,165,.12) 0%,transparent 70%)}
 .acard.ba::after{background:radial-gradient(circle,rgba(80,60,150,.16) 0%,transparent 70%)}
@@ -109,38 +79,45 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .acard:hover::after{opacity:1}
 .acard:hover{border-color:rgba(201,169,110,.48);transform:translateY(-3px)}
 .acard.off{opacity:.38;cursor:not-allowed;transform:none!important}
-.acard .ai{font-size:1.9rem;margin-bottom:7px}
-.acard .an{color:var(--accent);font-size:.9rem;margin-bottom:5px}
-.acard .ah{color:var(--text-dim);font-size:.74rem;font-style:italic}
-.res-strip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;padding:10px 16px;background:var(--reserve);border:1px solid rgba(201,169,110,.12);max-width:500px;min-height:48px}
+.acard .ai{font-size:1.9rem;margin-bottom:6px}
+.acard .an{color:var(--accent);font-size:.88rem;margin-bottom:4px}
+.acard .ah{color:var(--text-dim);font-size:.72rem;font-style:italic}
+.chance-row{display:flex;align-items:center;gap:5px;margin-top:7px}
+.cbar{flex:1;height:3px;background:rgba(201,169,110,.12);border-radius:2px;overflow:hidden}
+.cfill{height:100%;border-radius:2px;transition:width .4s}
+.cfill.hi{background:#6abf6a}.cfill.md{background:var(--accent)}.cfill.lo{background:#c07060}
+.cpct{font-size:.62rem;color:var(--text-dim);min-width:28px;text-align:right}
+.dtag{font-size:.64rem;color:#7ab07a;margin-top:3px;border-top:1px dashed rgba(120,180,120,.2);padding-top:3px}
+.res-strip{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;padding:9px 14px;background:var(--reserve);border:1px solid rgba(201,169,110,.12);max-width:500px;min-height:44px}
 .res-lbl{font-size:.75rem;color:var(--text-dim)}
-
-/* ===== SANCTUARY ===== */
-.slay{display:flex;gap:16px;width:100%;max-width:860px;align-items:flex-start}
-.rpanel{min-width:155px;background:var(--reserve);border:1px solid rgba(201,169,110,.18);padding:14px}
-.rmarbs{display:flex;flex-wrap:wrap;gap:7px;min-height:80px;align-items:flex-start;margin-bottom:10px}
-.hint-bar{background:rgba(201,169,110,.06);border:1px solid rgba(201,169,110,.13);padding:9px 14px;font-size:.78rem;color:var(--text-dim);font-style:italic;text-align:center;max-width:860px;width:100%;margin-bottom:10px;transition:color .3s}
-.shelves{flex:1;display:flex;flex-direction:column;gap:11px}
-.shelf{background:var(--shelf);border:1px solid rgba(201,169,110,.18);padding:14px;cursor:pointer;transition:border-color .25s,background .25s;position:relative}
+/* SANCTUARY */
+.slay{display:flex;gap:14px;width:100%;max-width:980px;align-items:flex-start}
+.rpanel{min-width:148px;background:var(--reserve);border:1px solid rgba(201,169,110,.18);padding:13px}
+.rmarbs{display:flex;flex-wrap:wrap;gap:7px;min-height:70px;align-items:flex-start;margin-bottom:9px}
+.cpanel{min-width:148px;background:rgba(8,6,20,.85);border:1px solid rgba(201,169,110,.18);padding:13px}
+.coarc{display:flex;flex-wrap:wrap;gap:6px;min-height:60px;align-items:flex-start;margin-bottom:8px}
+.cstat{font-size:.72rem;margin:2px 0}
+.cstat.white{color:#c0b8a8}.cstat.black{color:#9080c0}.cstat.gray{color:#8090a0}.cstat.penalty{color:#bf6a6a}
+.hint-bar{background:rgba(201,169,110,.06);border:1px solid rgba(201,169,110,.13);padding:9px 14px;font-size:.78rem;color:var(--text-dim);font-style:italic;text-align:center;max-width:980px;width:100%;margin-bottom:10px;transition:color .3s}
+.shelves{flex:1;display:flex;flex-direction:column;gap:10px}
+.shelf{background:var(--shelf);border:1px solid rgba(201,169,110,.18);padding:13px;cursor:pointer;transition:border-color .25s,background .25s}
 .shelf.drop{border-color:var(--accent);background:rgba(201,169,110,.04)}
-.shelf-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.shelf-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .shelf-name{color:var(--accent);font-size:.88rem}
 .shelf-cnt{color:var(--text-dim);font-size:.74rem}
-.shelf-marbs{display:flex;flex-wrap:wrap;gap:6px;min-height:38px;align-items:center;margin-bottom:8px}
-.tbar{display:flex;align-items:center;gap:2px;margin-bottom:5px}
+.shelf-marbs{display:flex;flex-wrap:wrap;gap:6px;min-height:36px;align-items:center;margin-bottom:7px}
+.tbar{display:flex;align-items:center;gap:2px;margin-bottom:4px}
 .tseg{flex:1;height:3px;background:rgba(201,169,110,.13);border-radius:2px;transition:background .4s}
 .tseg.on{background:var(--accent)}
 .tmrk{width:1px;height:9px;background:rgba(201,169,110,.3);flex-shrink:0}
-.tlbl{font-size:.64rem;color:var(--text-dim)}
+.tlbl{font-size:.62rem;color:var(--text-dim)}
 .sbonus{font-size:.72rem;color:#6abf6a;margin-top:3px}
-.spenalty{font-size:.72rem;color:#bf6a6a;margin-top:2px}
 .dombar{display:flex;gap:2px;height:5px;margin-top:5px;border-radius:3px;overflow:hidden}
 .dbar{height:100%;border-radius:2px;transition:width .5s}
 .dbar.white{background:linear-gradient(90deg,#b8b0a0,#d8d0c0)}
 .dbar.black{background:linear-gradient(90deg,#302850,#504880)}
 .dbar.gray{background:linear-gradient(90deg,#484858,#787888)}
-
-/* ===== COMBAT ===== */
+/* COMBAT */
 #combat-screen{justify-content:center}
 .combat-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:560px;width:100%}
 .enemy-box{width:100%;padding:24px;background:rgba(18,8,8,.6);border:1px solid rgba(180,70,70,.28);text-align:center}
@@ -149,8 +126,7 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .hp-wrap{margin-top:11px}
 .hp-lbl{font-size:.72rem;color:var(--text-dim);margin-bottom:3px}
 .hpbar{height:7px;border-radius:4px;overflow:hidden}
-.hpbar.e-bg{background:rgba(180,70,70,.14)}
-.hpbar.p-bg{background:rgba(70,160,70,.14)}
+.hpbar.e-bg{background:rgba(180,70,70,.14)}.hpbar.p-bg{background:rgba(70,160,70,.14)}
 .hpfill{height:100%;border-radius:4px;transition:width .5s}
 .hpfill.e{background:linear-gradient(90deg,#702020,#c04040)}
 .hpfill.p{background:linear-gradient(90deg,#206820,#40b840)}
@@ -163,8 +139,7 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .bonuses{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .btag{font-size:.7rem;padding:3px 8px;background:rgba(90,150,90,.13);border:1px solid rgba(90,150,90,.28);color:#70b070}
 .ptag{font-size:.7rem;padding:3px 8px;background:rgba(150,80,80,.13);border:1px solid rgba(150,80,80,.28);color:#b07070}
-
-/* ===== JOURNAL ===== */
+/* JOURNAL */
 .jlay{display:flex;gap:16px;max-width:860px;width:100%;align-items:flex-start}
 .jslots{min-width:195px;background:rgba(18,12,8,.8);border:1px solid rgba(201,169,110,.18);padding:14px}
 .aslot{padding:12px;border:1px dashed rgba(201,169,110,.28);min-height:78px;margin-bottom:10px;cursor:pointer;transition:all .25s;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
@@ -189,40 +164,27 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
 .jeff{color:#6abf6a;font-size:.72rem;margin-bottom:5px}
 .jtags{display:flex;gap:5px;flex-wrap:wrap}
 .jtag{font-size:.68rem;padding:2px 6px;background:rgba(201,169,110,.08);border:1px solid rgba(201,169,110,.18);color:var(--text-dim)}
-
-/* ===== OBLIVION ===== */
+/* OBLIVION */
 #oblivion-screen{justify-content:center;text-align:center}
 .otext{max-width:400px;color:var(--text-dim);font-style:italic;line-height:1.8;font-size:.88rem;margin-bottom:16px}
 .ocores{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px 0}
 .ocore{padding:12px;border:1px solid rgba(201,169,110,.18);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .28s;font-size:.75rem;color:var(--text-dim)}
 .ocore:hover{border-color:var(--accent);color:var(--accent)}
-
-/* ===== SCROLLBAR ===== */
+/* MISC */
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(201,169,110,.28);border-radius:2px}
-
-/* ===== ANIMATIONS ===== */
 @keyframes fadeIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
 .fi{animation:fadeIn .4s ease-out}
-@keyframes mspawn{0%{transform:scale(0) rotate(160deg);opacity:0}70%{transform:scale(1.18) rotate(-8deg);opacity:1}100%{transform:scale(1);opacity:1}}
-.spawn{animation:mspawn .5s cubic-bezier(.175,.885,.32,1.275)}
-@keyframes compress{0%{transform:scale(1)}40%{transform:scale(.08);opacity:.4}100%{transform:scale(1);opacity:1}}
-.compressing{animation:compress .7s ease-in-out}
-
-@media(max-width:640px){
+@media(max-width:680px){
   .slay,.jlay{flex-direction:column}
-  .rpanel,.jslots{min-width:unset;width:100%}
-  .actions-grid{gap:8px}
-  .acard{width:140px}
+  .rpanel,.jslots,.cpanel{min-width:unset;width:100%}
+  .actions-grid{gap:8px}.acard{width:140px}
   h1{font-size:1.8rem}
 }
+#start-screen .lore{max-width:360px;text-align:center;color:var(--text-dim);font-style:italic;line-height:1.8;font-size:.88rem;margin-bottom:2rem}
 </style>
 </head>
 <body>
-
-<!-- NOTIF -->
 <div id="notif"></div>
-
-<!-- HUD -->
 <div id="hud">
   <div class="hud-grp">
     <span class="hlbl">Адаптивность</span>
@@ -246,21 +208,15 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
   </div>
 </div>
 
-<!-- START -->
 <div id="start-screen" class="screen active">
   <h1>Знание как Вес</h1>
   <p class="sub">Прогресс как осознанный выбор</p>
-  <div class="lore">
-    Каждое действие оставляет след в тебе.<br>
-    Каждый выбор — это вес, который несёшь.<br>
-    Собирай. Осмысляй. Выбирай, кем становиться.
-  </div>
+  <div class="lore">Каждое действие оставляет след в тебе.<br>Каждый выбор — это вес, который несёшь.<br>Собирай. Осмысляй. Выбирай, кем становиться.</div>
   <button class="btn-big" onclick="startGame()">Начать путь</button>
 </div>
 
-<!-- EXPEDITION -->
 <div id="expedition-screen" class="screen">
-  <div class="loc-head"><h2 id="loc-name">Руины на краю леса</h2></div>
+  <div class="loc-head"><h2 id="loc-name"></h2></div>
   <p class="loc-desc" id="loc-desc"></p>
   <div class="world-rx" id="wrx"></div>
   <div class="echo-bar" id="echo">⟳ Резерв переполнен — опыт растворяется эхом. Вернись в Убежище.</div>
@@ -269,11 +225,9 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
   <div class="res-strip" id="res-strip"></div>
   <div class="btn-row">
     <button onclick="goSanctuary()">⟵ Убежище</button>
-    <button id="fight-btn" onclick="startCombat()">⚔ Столкновение</button>
   </div>
 </div>
 
-<!-- SANCTUARY -->
 <div id="sanctuary-screen" class="screen">
   <h2>Убежище — Ментальная карта</h2>
   <div class="hint-bar" id="shint">Выбери шарик из Резерва, затем нажми на полку для размещения.</div>
@@ -282,9 +236,15 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
       <h3>Резерв <span id="rcsanc">0/10</span></h3>
       <div class="rmarbs" id="rmarbs"></div>
       <button onclick="sellMarble()" style="width:100%;font-size:.74rem;padding:7px">Продать выбранный</button>
-      <div style="font-size:.68rem;color:var(--text-dim);margin-top:5px;text-align:center">Только из Резерва</div>
+      <div style="font-size:.66rem;color:var(--text-dim);margin-top:5px;text-align:center">Только из Резерва</div>
     </div>
     <div class="shelves" id="shelves"></div>
+    <div class="cpanel">
+      <h3>Архив Ядер <span id="coarc-cnt">0/8</span></h3>
+      <div class="coarc" id="coarc"></div>
+      <div id="coarc-stats"></div>
+      <div style="font-size:.64rem;color:var(--text-dim);margin-top:8px;font-style:italic;line-height:1.5">Ядро = 8 шаров<br>−3% Адаптивности каждое</div>
+    </div>
   </div>
   <div class="btn-row">
     <button onclick="goExpedition()">→ Экспедиция</button>
@@ -292,7 +252,6 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
   </div>
 </div>
 
-<!-- COMBAT -->
 <div id="combat-screen" class="screen">
   <div class="combat-wrap">
     <h2>Столкновение</h2>
@@ -318,7 +277,6 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
   </div>
 </div>
 
-<!-- JOURNAL -->
 <div id="journal-screen" class="screen">
   <h2>Дневник</h2>
   <div class="jlay">
@@ -334,148 +292,103 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
   <div class="btn-row"><button onclick="closeJournal()">← Назад</button></div>
 </div>
 
-<!-- OBLIVION -->
 <div id="oblivion-screen" class="screen">
   <h2>Локация Забвения</h2>
   <p class="otext">Вода стоячая, тёмная. Можно растворить то, что стало слишком твёрдым. Это требует усилия — и кое-что будет утеряно.</p>
   <div id="ono" style="color:var(--text-dim);font-style:italic;display:none">Нет Ядер для растворения.</div>
   <div class="ocores" id="ocores"></div>
   <div style="font-size:.75rem;color:var(--text-dim);text-align:center;line-height:1.6;max-width:380px">
-    Растворение Ядра: 10 ОР → 2–3 шарика в Резерв, снимает –3% Адаптивности<br>
-    <span style="font-size:.68rem">ОР зарабатываются в бою и продажей шариков</span>
+    10 ОР → Ядро растворено, 2–3 шарика в Резерв, +3% Адаптивности возвращается
   </div>
   <div style="margin-top:8px;font-size:.82rem;color:var(--text-dim)">Очки Решимости: <span id="owp" style="color:var(--accent);font-weight:bold">0</span></div>
   <div class="btn-row"><button onclick="closeOblivion()">← Назад</button></div>
 </div>
 
 <script>
-// ======================================================
-// DATA
-// ======================================================
 const COLORS = { white:'белый', black:'чёрный', gray:'серый' };
 
-const LOCS = [
+const LOC_POOLS = [
   {
     name:'Руины на краю леса',
     desc:'Старые камни хранят тишину. Здесь можно многое узнать — или многое потерять.',
-    acts:[
-      {id:'obs', name:'Изучить следы',   icon:'🔍', col:'white', hint:'Внимательность, анализ'},
-      {id:'rsh', name:'Прорваться силой',icon:'⚡', col:'black', hint:'Скорость, риск'},
-      {id:'wt',  name:'Выждать момент',  icon:'⏸', col:'gray',  hint:'Баланс, реакция'},
+    pool:[
+      {id:'obs', col:'white',icon:'🔍',name:'Изучить следы',      hint:'Внимательность',  direct:null},
+      {id:'rsh', col:'black',icon:'⚡',name:'Прорваться силой',   hint:'Скорость, риск',  direct:null},
+      {id:'wt',  col:'gray', icon:'⏸',name:'Выждать момент',     hint:'Баланс, реакция', direct:null},
+      {id:'trn', col:'white',icon:'⚔',name:'Отработать удар',    hint:'→ Боевая стойка', direct:'s0'},
+      {id:'snk', col:'black',icon:'🌑',name:'Скрытный манёвр',   hint:'→ Тень',           direct:'s1'},
+      {id:'brt', col:'gray', icon:'🤲',name:'Обменять находки',  hint:'→ Переговоры',    direct:'s2'},
     ]
   },
   {
     name:'Торговый квартал',
     desc:'Шум, запахи специй, внимательные глаза торговцев. Каждое слово здесь — ход.',
-    acts:[
-      {id:'neg', name:'Торговаться',     icon:'🤝', col:'white', hint:'Точный подбор слов'},
-      {id:'blf', name:'Блефовать',       icon:'🎭', col:'black', hint:'Агрессивный торг'},
-      {id:'med', name:'Посредничать',    icon:'⚖',  col:'gray',  hint:'Уравновешивать стороны'},
+    pool:[
+      {id:'neg', col:'white',icon:'🤝',name:'Торговаться',          hint:'Точный подбор слов',  direct:null},
+      {id:'blf', col:'black',icon:'🎭',name:'Блефовать',            hint:'Давление, риск',      direct:null},
+      {id:'med', col:'gray', icon:'⚖', name:'Посредничать',        hint:'Уравновешивать',      direct:null},
+      {id:'anl', col:'white',icon:'🔎',name:'Изучить цены',        hint:'→ Переговоры',        direct:'s2'},
+      {id:'prs', col:'black',icon:'👊',name:'Надавить на купца',   hint:'→ Тень',              direct:'s1'},
+      {id:'bal', col:'gray', icon:'🔄',name:'Уравновесить сделку', hint:'→ Переговоры',        direct:'s2'},
     ]
   },
   {
     name:'Заброшенная библиотека',
     desc:'Пыльные свитки, шёпот страниц. Знание здесь — пароль.',
-    acts:[
-      {id:'rd',  name:'Читать свитки',   icon:'📜', col:'white', hint:'Глубокий анализ'},
-      {id:'stl', name:'Похитить артефакт',icon:'🗝', col:'black', hint:'Дерзость, быстрое действие'},
-      {id:'cpy', name:'Скопировать тезисы',icon:'✍', col:'gray', hint:'Методичная работа'},
+    pool:[
+      {id:'rd',  col:'white',icon:'📜',name:'Читать свитки',       hint:'Глубокий анализ', direct:null},
+      {id:'stl', col:'black',icon:'🗝', name:'Похитить артефакт',  hint:'Дерзость',        direct:null},
+      {id:'cpy', col:'gray', icon:'✍', name:'Копировать тезисы',  hint:'Методичная работа',direct:null},
+      {id:'mem', col:'white',icon:'📖',name:'Выучить наизусть',    hint:'→ Боевая стойка', direct:'s0'},
+      {id:'crk', col:'black',icon:'🔓',name:'Взломать архив',     hint:'→ Тень',           direct:'s1'},
+      {id:'syn', col:'gray', icon:'🔗',name:'Сопоставить знания', hint:'→ Переговоры',     direct:'s2'},
     ]
   }
 ];
 
 const ENEMIES = [
-  {
-    name:'Страж руин', type:'heavy',
-    desc:'Медлительный, но неотвратимый. Предпочитает прямой натиск. Чёрные атаки здесь опасны.',
-    hp:80, weakness:'white', strong:'black',
-    dmg:{white:8, black:20, gray:13}
-  },
-  {
-    name:'Теневой охотник', type:'swift',
-    desc:'Стремительный, атакует из темноты. Прямой удар он предвидит заранее.',
-    hp:55, weakness:'gray', strong:'white',
-    dmg:{white:19, black:9, gray:6}
-  }
+  {name:'Страж руин',      desc:'Медлительный, но неотвратимый. Прямой натиск — его стихия. Точность разбивает его.',         hp:80, weakness:'white', strong:'black', dmg:{white:8,black:20,gray:13}},
+  {name:'Теневой охотник', desc:'Стремительный, атакует из темноты. Прямой удар он предвидит. Равновесие — его слабость.', hp:55, weakness:'gray',  strong:'white', dmg:{white:19,black:9,gray:6}}
 ];
 
 const J_TEMPLATES = [
-  {
-    id:'j_w', col:'white', ctx:'Анализ',
-    title:'О точности удара',
-    text:'Когда я жду и наблюдаю — мир открывает трещины в броне. Осторожность — это не слабость.',
-    eff:'+5% к точным действиям, видны слабые места',
-    tags:['анализ','точность','слабые места']
-  },
-  {
-    id:'j_b', col:'black', ctx:'Натиск',
-    title:'О цене натиска',
-    text:'Когда бросаюсь вперёд — мир расступается. Но после этого всё кружится. Натиск берёт дань.',
-    eff:'+5% к скоростным действиям, открывает скрытые проходы',
-    tags:['скорость','риск','прорыв']
-  },
-  {
-    id:'j_g', col:'gray', ctx:'Баланс',
-    title:'О равновесии',
-    text:'Есть момент между атакой и защитой. В этой паузе — невидимый рычаг.',
-    eff:'+5% к реакции, NPC предлагают посреднические роли',
-    tags:['равновесие','реакция','момент']
-  },
-  {
-    id:'j_w2', col:'white', ctx:'Белое Ядро',
-    title:'Записки об Аккуратности',
-    text:'Ядро точности сформировалось само. Оно тяжёлое. Каждый удар теперь выверен — но адаптироваться стало труднее.',
-    eff:'+8% к точным действиям, видна структура брони',
-    tags:['ядро','точность','специализация']
-  },
-  {
-    id:'j_b2', col:'black', ctx:'Чёрное Ядро',
-    title:'Записки о Давлении',
-    text:'Ядро натиска сжалось в груди. Я быстрее прежнего — но не слышу предупреждений.',
-    eff:'+8% к скоростным атакам, доступны скрытые контракты',
-    tags:['ядро','натиск','специализация']
-  }
+  {id:'j_w', col:'white',title:'О точности удара',         text:'Когда я жду и наблюдаю — мир открывает трещины в броне. Осторожность — это не слабость.',               eff:'+5% к точным действиям, видны слабые места',          tags:['анализ','точность','слабые места']},
+  {id:'j_b', col:'black',title:'О цене натиска',           text:'Когда бросаюсь вперёд — мир расступается. Но после этого всё кружится. Натиск берёт дань.',              eff:'+5% к скоростным действиям, открывает скрытые проходы',tags:['скорость','риск','прорыв']},
+  {id:'j_g', col:'gray', title:'О равновесии',             text:'Есть момент между атакой и защитой. В этой паузе — невидимый рычаг.',                                     eff:'+5% к реакции, NPC предлагают посреднические роли',   tags:['равновесие','реакция','момент']},
+  {id:'j_w2',col:'white',title:'Записки об Аккуратности', text:'Ядро точности сформировалось само. Оно тяжёлое. Каждый удар выверен — но адаптироваться труднее.',         eff:'+8% к точным действиям, видна структура брони',       tags:['ядро','точность','специализация']},
+  {id:'j_b2',col:'black',title:'Записки о Давлении',      text:'Ядро натиска сжалось в груди. Я быстрее прежнего — но не слышу предупреждений.',                           eff:'+8% к скоростным атакам, доступны скрытые контракты', tags:['ядро','натиск','специализация']},
 ];
 
-// ======================================================
-// STATE
-// ======================================================
-let G = {};
-let uid = 0;
-let locIdx = 0;
-let prevScreen = 'sanctuary-screen';
-let notifTm;
+// ===== STATE =====
+let G = {}, uid = 0, locIdx = 0, prevScreen = 'sanctuary-screen', notifTm;
 
 function initState() {
   G = {
-    reserve: { cap:10, marbs:[] },
+    reserve:{ cap:10, marbs:[] },
     shelves:[
-      {id:'s0', name:'Боевая стойка', marbs:[], cores:[]},
-      {id:'s1', name:'Тень',          marbs:[], cores:[]},
-      {id:'s2', name:'Переговоры',    marbs:[], cores:[]},
+      {id:'s0', name:'Боевая стойка', marbs:[], max_slots:10},
+      {id:'s1', name:'Тень',          marbs:[], max_slots:10},
+      {id:'s2', name:'Переговоры',    marbs:[], max_slots:10},
     ],
-    adapt: 1.0,
-    totalCores: 0,
-    will: 30,
-    journal: { entries:[], slots:[null,null] },
-    world: { dom:null },
-    combat: { enemy:null, ehp:0, emx:0, php:100, pmx:100, done:false },
-    sel: null,
-    echo: false,
-    cycle: 0,
+    coreArchive:[],
+    adapt:1.0,
+    will:30,
+    journal:{ entries:[], slots:[null,null] },
+    world:{ dom:null },
+    combat:{ enemy:null, ehp:0, emx:0, php:100, pmx:100, done:false },
+    sel:null,
+    echo:false,
+    cycle:0,
+    curActs:[],
   };
-  // Start with template journal entries? No — unlock on first threshold
 }
 
-function mk(col, ctx) {
-  return { id:`m${++uid}`, col, ctx, rare: Math.random()<.1 };
-}
+function mk(col, ctx) { return { id:`m${++uid}`, col, ctx, rare:Math.random()<.1 }; }
 
-// ======================================================
-// FLOW
-// ======================================================
+// ===== FLOW =====
 function startGame() {
   initState();
+  initCurActs();
   showScreen('expedition-screen');
   document.getElementById('hud').classList.add('on');
   renderExp();
@@ -486,7 +399,7 @@ function goSanctuary() {
   prevScreen = 'sanctuary-screen';
   G.echo = false;
   G.cycle++;
-  if (G.cycle % 3 === 0) locIdx = (locIdx+1) % LOCS.length;
+  if (G.cycle % 3 === 0) locIdx = (locIdx+1) % LOC_POOLS.length;
   G.sel = null;
   showScreen('sanctuary-screen');
   renderSanctuary();
@@ -494,6 +407,7 @@ function goSanctuary() {
 }
 
 function goExpedition() {
+  initCurActs();
   showScreen('expedition-screen');
   renderExp();
   updateHUD();
@@ -507,8 +421,7 @@ function openJournal() {
 
 function closeJournal() {
   showScreen(prevScreen);
-  if (prevScreen === 'expedition-screen') renderExp();
-  else renderSanctuary();
+  if (prevScreen==='expedition-screen') renderExp(); else renderSanctuary();
 }
 
 function openOblivion() {
@@ -519,43 +432,64 @@ function openOblivion() {
 
 function closeOblivion() {
   showScreen(prevScreen);
-  if (prevScreen === 'expedition-screen') renderExp();
-  else renderSanctuary();
+  if (prevScreen==='expedition-screen') renderExp(); else renderSanctuary();
 }
 
-// ======================================================
-// EXPEDITION
-// ======================================================
+// ===== ACTION POOL =====
+function initCurActs() {
+  const pool = LOC_POOLS[locIdx].pool;
+  const shuffled = [...pool].sort(()=>Math.random()-.5);
+  G.curActs = shuffled.slice(0,3);
+}
+
+function rotateAction(idx) {
+  const pool = LOC_POOLS[locIdx].pool;
+  const others = pool.filter(a => a.id !== G.curActs[idx].id && !G.curActs.some((c,i)=>i!==idx&&c.id===a.id));
+  const candidates = others.length > 0 ? others : pool.filter(a=>a.id!==G.curActs[idx].id);
+  if (candidates.length > 0) G.curActs[idx] = candidates[Math.floor(Math.random()*candidates.length)];
+}
+
+function successChance(col) {
+  let n = 0;
+  G.shelves.forEach(sh => n += sh.marbs.filter(m=>m.col===col).length);
+  n += G.coreArchive.filter(c=>c.col===col).length * 8;
+  return Math.min(0.92, 0.45 + n*0.05);
+}
+
+// ===== EXPEDITION =====
 function renderExp() {
-  const loc = LOCS[locIdx];
+  const loc = LOC_POOLS[locIdx];
   document.getElementById('loc-name').textContent = loc.name;
   document.getElementById('loc-desc').textContent = loc.desc;
 
-  // World reaction
   const wrx = document.getElementById('wrx');
   const rxMap = {
-    white:'Торговцы тебе доверяют. Стража сдержана. Слабые места видны острее.',
+    white:'Торговцы тебе доверяют. Стража сдержана. Слабые места врагов видны острее.',
     black:'Наёмники замечают первыми. Лавки настороже. Скрытые проходы открыты.',
     gray:'Нейтральные NPC ищут посредника. Ритм врагов смещается.'
   };
-  if (G.world.dom && rxMap[G.world.dom]) {
-    wrx.textContent = rxMap[G.world.dom];
-    wrx.classList.add('on');
-  } else {
-    wrx.classList.remove('on');
-  }
+  if (G.world.dom && rxMap[G.world.dom]) { wrx.textContent=rxMap[G.world.dom]; wrx.classList.add('on'); }
+  else wrx.classList.remove('on');
 
-  // Echo
   document.getElementById('echo').classList.toggle('on', G.echo);
 
-  // Actions
   const grid = document.getElementById('agrid');
   grid.innerHTML = '';
-  loc.acts.forEach(a => {
+  G.curActs.forEach((a, idx) => {
+    const chance = successChance(a.col);
+    const pct = Math.round(chance*100);
+    const cls = pct>=70?'hi':pct>=50?'md':'lo';
+    const sh = a.direct ? G.shelves.find(s=>s.id===a.direct) : null;
     const d = document.createElement('div');
-    d.className = `acard ${a.col[0]}a ${G.echo ? 'off' : ''}`;
-    d.innerHTML = `<div class="ai">${a.icon}</div><div class="an">${a.name}</div><div class="ah">${a.hint}</div>`;
-    if (!G.echo) d.onclick = () => doAct(a);
+    d.className = `acard ${a.col[0]}a${G.echo?' off':''}`;
+    d.innerHTML = `
+      <div class="ai">${a.icon}</div>
+      <div class="an">${a.name}</div>
+      <div class="ah">${a.hint}</div>
+      <div class="chance-row"><div class="cbar"><div class="cfill ${cls}" style="width:${pct}%"></div></div><span class="cpct">${pct}%</span></div>
+      ${sh?`<div class="dtag">→ ${sh.name}</div>`:''}
+    `;
+    if (!G.echo) d.onclick = () => doAct(a, idx);
     grid.appendChild(d);
   });
 
@@ -567,284 +501,293 @@ function renderResStrip() {
   document.getElementById('res-lbl').textContent = `Резерв: ${cnt}/10`;
   const strip = document.getElementById('res-strip');
   strip.innerHTML = '';
-  if (cnt === 0) {
-    strip.innerHTML = '<span style="color:var(--text-dim);font-size:.78rem;font-style:italic">пуст</span>';
-    return;
-  }
-  G.reserve.marbs.forEach(m => {
-    const el = document.createElement('div');
-    el.className = `marble xs ${m.col}`;
-    el.title = COLORS[m.col];
-    strip.appendChild(el);
-  });
+  if (cnt===0) { strip.innerHTML='<span style="color:var(--text-dim);font-size:.78rem;font-style:italic">пуст</span>'; return; }
+  G.reserve.marbs.forEach(m=>{ const e=document.createElement('div'); e.className=`marble xs ${m.col}`; e.title=COLORS[m.col]; strip.appendChild(e); });
 }
 
-function doAct(a) {
-  if (G.reserve.marbs.length >= G.reserve.cap) {
-    G.echo = true;
-    notify('Резерв переполнен. Опыт растворяется эхом. Вернись в Убежище.');
+function doAct(a, idx) {
+  const chance = successChance(a.col);
+  const success = Math.random() < chance;
+
+  if (!success) {
+    notify(`${a.name} — неудача (шанс был ${Math.round(chance*100)}%).`);
+    rotateAction(idx);
     renderExp();
     return;
   }
-  const m = mk(a.col, a.id);
-  G.reserve.marbs.push(m);
 
-  const active = G.journal.slots.filter(Boolean);
-  const bonus = active.some(e => e.col === a.col);
-  const btext = bonus ? ' (+5% дневник)' : '';
-  notify(`${a.name} — получен ${COLORS[a.col]} шарик${btext}`, a.col);
-
-  if (G.reserve.marbs.length >= G.reserve.cap) {
-    G.echo = true;
-  } else if (G.reserve.marbs.length >= G.reserve.cap - 2) {
-    notify(`Резерв почти полон (${G.reserve.marbs.length}/10)`);
+  let placed = false;
+  if (a.direct) {
+    const sh = G.shelves.find(s=>s.id===a.direct);
+    if (sh && sh.marbs.length < sh.max_slots) {
+      sh.marbs.push(mk(a.col, a.id));
+      const bonus = G.journal.slots.filter(Boolean).some(e=>e.col===a.col);
+      notify(`${a.name} — ${COLORS[a.col]} шарик прямо в «${sh.name}»!${bonus?' (+5%)':''}`, a.col);
+      checkThreshold(sh);
+      recalcWorld();
+      placed = true;
+    }
+    // fallthrough to reserve if shelf full
   }
+
+  if (!placed) {
+    if (G.reserve.marbs.length >= G.reserve.cap) {
+      G.echo = true;
+      notify('Резерв переполнен. Опыт растворяется эхом. Вернись в Убежище.');
+    } else {
+      G.reserve.marbs.push(mk(a.col, a.id));
+      const bonus = G.journal.slots.filter(Boolean).some(e=>e.col===a.col);
+      notify(`${a.name} — ${COLORS[a.col]} шарик в Резерв${bonus?' (+5%)':''}`, a.col);
+      if (G.reserve.marbs.length >= G.reserve.cap) G.echo = true;
+    }
+  }
+
+  rotateAction(idx);
+
+  // Random encounter 15%
+  if (Math.random() < 0.15) {
+    setTimeout(()=>{ notify('⚔ Неожиданное столкновение!'); setTimeout(startCombat, 900); }, 600);
+  }
+
   renderExp();
   updateHUD();
 }
 
-// ======================================================
-// COMBAT
-// ======================================================
+// ===== COMBAT =====
 function startCombat() {
-  const idx = G.world.dom === 'black' ? 1 : G.world.dom === 'white' ? 0 : Math.random()<.5?0:1;
+  const idx = G.world.dom==='black'?1:G.world.dom==='white'?0:Math.random()<.5?0:1;
   const tmpl = ENEMIES[idx];
-  G.combat = {
-    enemy:{...tmpl}, ehp:tmpl.hp, emx:tmpl.hp,
-    php:100, pmx:100, done:false
-  };
+  G.combat = { enemy:{...tmpl}, ehp:tmpl.hp, emx:tmpl.hp, php:100, pmx:100, done:false };
   showScreen('combat-screen');
-  renderCombat();
-}
-
-function renderCombat() {
-  const {enemy,ehp,emx,php,pmx} = G.combat;
-  document.getElementById('ename').textContent = enemy.name;
-  document.getElementById('edesc').textContent = enemy.desc;
-  document.getElementById('ehp').style.width = (Math.max(0,ehp/emx)*100)+'%';
-  document.getElementById('php').style.width = (Math.max(0,php/pmx)*100)+'%';
   renderCombatBonuses();
-  document.getElementById('cbtns').style.display = G.combat.done ? 'none' : 'flex';
+  document.getElementById('ename').textContent = tmpl.name;
+  document.getElementById('edesc').textContent = tmpl.desc;
+  document.getElementById('ehp').style.width='100%';
+  document.getElementById('php').style.width='100%';
+  document.getElementById('clog').textContent='Ты вступаешь в схватку…';
+  const btns = document.getElementById('cbtns');
+  btns.innerHTML='';
+  btns.style.display='flex';
+  ['white','black','gray'].forEach(col=>{
+    const b=document.createElement('button');
+    b.className=`cbtn ${col[0]}`;
+    b.textContent=col==='white'?'⬜ Точный удар':col==='black'?'⬛ Натиск':'◽ Парирование';
+    b.onclick=()=>doFight(col);
+    btns.appendChild(b);
+  });
 }
 
 function renderCombatBonuses() {
   const el = document.getElementById('cbonuses');
-  el.innerHTML = '';
-  G.shelves.forEach(sh => {
-    const tot = shelfTotal(sh);
-    if (tot === 0) return;
-    const dom = shelfDom(sh);
-    const n = Math.max(
-      sh.marbs.filter(m=>m.col==='white').length + sh.cores.filter(c=>c.col==='white').length*8,
-      sh.marbs.filter(m=>m.col==='black').length + sh.cores.filter(c=>c.col==='black').length*8,
-      sh.marbs.filter(m=>m.col==='gray').length  + sh.cores.filter(c=>c.col==='gray').length*8
-    );
-    if (n>=3) {
-      const b = n>=8?12:n>=5?8:5;
-      el.innerHTML += `<span class="btag">${sh.name} +${b}% (${COLORS[dom]})</span>`;
-    }
+  el.innerHTML='';
+  G.shelves.forEach(sh=>{
+    const w=sh.marbs.filter(m=>m.col==='white').length;
+    const b=sh.marbs.filter(m=>m.col==='black').length;
+    const g=sh.marbs.filter(m=>m.col==='gray').length;
+    const mx=Math.max(w,b,g);
+    if (mx===0) return;
+    const dom=w===mx?'white':b===mx?'black':'gray';
+    el.innerHTML+=`<span class="btag">${sh.name} +${mx}% (${COLORS[dom]})</span>`;
   });
-  if (G.adapt < 1.0) {
-    el.innerHTML += `<span class="ptag">Адаптивность −${Math.round((1-G.adapt)*100)}%</span>`;
-  }
-  G.journal.slots.forEach(e => {
-    if (e) el.innerHTML += `<span class="btag">«${e.title}» +5%</span>`;
-  });
+  const cw=G.coreArchive.filter(c=>c.col==='white').length*8;
+  const cb=G.coreArchive.filter(c=>c.col==='black').length*8;
+  const cg=G.coreArchive.filter(c=>c.col==='gray').length*8;
+  if (cw>0) el.innerHTML+=`<span class="btag">Ядра +${cw}% (белый)</span>`;
+  if (cb>0) el.innerHTML+=`<span class="btag">Ядра +${cb}% (чёрный)</span>`;
+  if (cg>0) el.innerHTML+=`<span class="btag">Ядра +${cg}% (серый)</span>`;
+  if (G.adapt<1.0) el.innerHTML+=`<span class="ptag">Адаптивность −${Math.round((1-G.adapt)*100)}%</span>`;
+  G.journal.slots.forEach(e=>{ if(e) el.innerHTML+=`<span class="btag">«${e.title}» +5%</span>`; });
 }
 
 function doFight(col) {
   if (G.combat.done) return;
   const e = G.combat.enemy;
 
-  // Player attack
-  let atk = 16;
-  G.shelves.forEach(sh => {
-    const n = sh.marbs.filter(m=>m.col===col).length + sh.cores.filter(c=>c.col===col).length*8;
-    if (n>=8) atk += 12;
-    else if (n>=5) atk += 8;
-    else if (n>=3) atk += 5;
+  let atk = 15;
+  G.shelves.forEach(sh=>{
+    const n=sh.marbs.filter(m=>m.col===col).length;
+    if (n>0) atk=Math.round(atk*(1+n/100));
   });
-  G.journal.slots.forEach(je => { if (je?.col===col) atk = Math.round(atk*1.05); });
-  atk = Math.round(atk * G.adapt);
+  const coreN = G.coreArchive.filter(c=>c.col===col).length*8;
+  if (coreN>0) atk=Math.round(atk*(1+coreN/100));
+  G.journal.slots.forEach(je=>{ if(je?.col===col) atk=Math.round(atk*1.05); });
+  atk = Math.round(atk*G.adapt);
 
-  const wmod = col===e.weakness ? 1.55 : col===e.strong ? 0.55 : 1.0;
-  const finalAtk = Math.round(atk * wmod);
-  G.combat.ehp = Math.max(0, G.combat.ehp - finalAtk);
+  const wmod = col===e.weakness?1.55:col===e.strong?0.55:1.0;
+  const finalAtk = Math.round(atk*wmod);
+  G.combat.ehp = Math.max(0, G.combat.ehp-finalAtk);
 
-  // Enemy attack
-  const base = e.dmg[col] || 12;
-  const eDmg = Math.round(base * (2 - G.adapt));
-  G.combat.php = Math.max(0, G.combat.php - eDmg);
+  const eDmg = Math.round((e.dmg[col]||12)*(2-G.adapt));
+  G.combat.php = Math.max(0, G.combat.php-eDmg);
 
-  let log = col===e.weakness
+  const log = col===e.weakness
     ? `Слабое место найдено. ${finalAtk} урона — противник шатается. Получено ${eDmg}.`
     : col===e.strong
     ? `Этот путь закрыт. ${finalAtk} урона, но получено ${eDmg} в ответ.`
     : `Обмен ударами. Нанесено ${finalAtk}, получено ${eDmg}.`;
   document.getElementById('clog').textContent = log;
+  document.getElementById('ehp').style.width = (Math.max(0,G.combat.ehp/G.combat.emx)*100)+'%';
+  document.getElementById('php').style.width = (Math.max(0,G.combat.php/G.combat.pmx)*100)+'%';
 
-  if (G.combat.ehp <= 0) { endCombat(true); return; }
-  if (G.combat.php <= 0) { endCombat(false); return; }
-  renderCombat();
+  if (G.combat.ehp<=0) { endCombat(true); return; }
+  if (G.combat.php<=0) { endCombat(false); return; }
 }
 
 function endCombat(won) {
   G.combat.done = true;
+  document.getElementById('ehp').style.width=(Math.max(0,G.combat.ehp/G.combat.emx)*100)+'%';
+  document.getElementById('php').style.width=(Math.max(0,G.combat.php/G.combat.pmx)*100)+'%';
+
   const btns = document.getElementById('cbtns');
-  btns.style.display = 'flex';
-  btns.innerHTML = '';
+  btns.innerHTML='';
+  btns.style.display='flex';
+
+  const btn = document.createElement('button');
+  btn.style.cssText='font-size:.88rem;padding:10px 24px';
 
   if (won) {
-    document.getElementById('clog').textContent =
-      'Противник повержен. Мир запомнил твой стиль. Получен шарик.';
-    if (G.reserve.marbs.length < G.reserve.cap) {
-      G.reserve.marbs.push(mk(dominantStyleAll(), 'combat'));
-    }
-    G.will += 8;
-    btns.innerHTML = '<button onclick="goExpedition()" style="font-size:.88rem;padding:10px 24px">→ Продолжить</button>';
+    document.getElementById('clog').textContent='Противник повержен. Мир запомнил твой стиль. Получен шарик.';
+    if (G.reserve.marbs.length<G.reserve.cap) G.reserve.marbs.push(mk(dominantAll(),'combat'));
+    G.will+=8;
+    btn.textContent='→ Продолжить';
+    btn.onclick=goExpedition;
   } else {
-    document.getElementById('clog').textContent =
-      'Ты отступаешь. Убежище ждёт. Следующий цикл начнётся иначе.';
-    G.combat.php = Math.max(1, Math.round(G.combat.pmx*0.3));
-    btns.innerHTML = '<button onclick="goSanctuary()" style="font-size:.88rem;padding:10px 24px">⟵ В Убежище</button>';
+    document.getElementById('clog').textContent='Ты отступаешь. Убежище ждёт. Следующий цикл начнётся иначе.';
+    btn.textContent='⟵ В Убежище';
+    btn.onclick=goSanctuary;
   }
-  renderCombat();
+  btns.appendChild(btn);
   updateHUD();
 }
 
-function dominantStyleAll() {
-  const t = {white:0,black:0,gray:0};
-  G.shelves.forEach(sh=>{
-    sh.marbs.forEach(m=>t[m.col]++);
-    sh.cores.forEach(c=>t[c.col]+=8);
-  });
+function dominantAll() {
+  const t={white:0,black:0,gray:0};
+  G.shelves.forEach(sh=>sh.marbs.forEach(m=>t[m.col]++));
+  G.coreArchive.forEach(c=>t[c.col]+=8);
   G.reserve.marbs.forEach(m=>t[m.col]++);
-  const mx = Math.max(t.white,t.black,t.gray);
+  const mx=Math.max(t.white,t.black,t.gray);
   if (mx===0) return ['white','black','gray'][Math.floor(Math.random()*3)];
   return t.white===mx?'white':t.black===mx?'black':'gray';
 }
 
-// ======================================================
-// SANCTUARY
-// ======================================================
+// ===== SANCTUARY =====
 function renderSanctuary() {
-  // Reserve
-  document.getElementById('rcsanc').textContent = `${G.reserve.marbs.length}/${G.reserve.cap}`;
-  const rEl = document.getElementById('rmarbs');
-  rEl.innerHTML = '';
-  G.reserve.marbs.forEach(m => {
-    const el = document.createElement('div');
-    el.className = `marble sm ${m.col}${G.sel?.id===m.id?' selected':''}`;
-    el.title = COLORS[m.col];
-    el.onclick = () => selectMarb(m);
+  document.getElementById('rcsanc').textContent=`${G.reserve.marbs.length}/${G.reserve.cap}`;
+  const rEl=document.getElementById('rmarbs');
+  rEl.innerHTML='';
+  G.reserve.marbs.forEach(m=>{
+    const el=document.createElement('div');
+    el.className=`marble sm ${m.col}${G.sel?.id===m.id?' selected':''}`;
+    el.title=COLORS[m.col];
+    el.onclick=()=>selectMarb(m);
     rEl.appendChild(el);
   });
-
-  // Shelves
-  const sEl = document.getElementById('shelves');
-  sEl.innerHTML = '';
-  G.shelves.forEach(sh => sEl.appendChild(buildShelf(sh)));
-
+  const sEl=document.getElementById('shelves');
+  sEl.innerHTML='';
+  G.shelves.forEach(sh=>sEl.appendChild(buildShelf(sh)));
+  renderCoreArchive();
   updateHint();
 }
 
+function renderCoreArchive() {
+  document.getElementById('coarc-cnt').textContent=`${G.coreArchive.length}/8`;
+  const el=document.getElementById('coarc');
+  el.innerHTML='';
+  if (G.coreArchive.length===0) {
+    el.innerHTML='<div style="color:var(--text-dim);font-size:.74rem;text-align:center;padding:10px">пусто</div>';
+  } else {
+    G.coreArchive.forEach(c=>{
+      const d=document.createElement('div');
+      d.className=`core sm ${c.col}`;
+      d.title=`${COLORS[c.col]} Ядро (из «${G.shelves.find(s=>s.id===c.src)?.name||'?'}») +8%`;
+      el.appendChild(d);
+    });
+  }
+  const stats=document.getElementById('coarc-stats');
+  stats.innerHTML='';
+  const t={white:0,black:0,gray:0};
+  G.coreArchive.forEach(c=>t[c.col]++);
+  Object.entries(t).forEach(([col,cnt])=>{ if(cnt>0) stats.innerHTML+=`<div class="cstat ${col}">+${cnt*8}% (${COLORS[col]})</div>`; });
+  if (G.coreArchive.length>0) stats.innerHTML+=`<div class="cstat penalty">−${G.coreArchive.length*3}% Адапт.</div>`;
+}
+
 function selectMarb(m) {
-  G.sel = G.sel?.id === m.id ? null : m;
+  G.sel = G.sel?.id===m.id?null:m;
   updateHint();
   renderSanctuary();
 }
 
 function updateHint() {
-  const h = document.getElementById('shint');
+  const h=document.getElementById('shint');
   if (G.sel) {
-    h.textContent = `Выбран ${COLORS[G.sel.col]} шарик. Нажми на полку для размещения.`;
-    h.style.color = G.sel.col==='white'?'#c0b8a8':G.sel.col==='black'?'#9080c0':'#8090a0';
+    h.textContent=`Выбран ${COLORS[G.sel.col]} шарик. Нажми на полку для размещения.`;
+    h.style.color=G.sel.col==='white'?'#c0b8a8':G.sel.col==='black'?'#9080c0':'#8090a0';
   } else {
-    h.textContent = 'Выбери шарик из Резерва, затем нажми на полку для размещения.';
-    h.style.color = '';
+    h.textContent='Выбери шарик из Резерва, затем нажми на полку для размещения.';
+    h.style.color='';
   }
 }
 
 function buildShelf(sh) {
-  const total = shelfTotal(sh);
-  const cnt = sh.marbs.length; // non-compressed
-  const cTotal = sh.cores.length * 8;
-  const dom = shelfDom(sh);
-  const threshold = cnt>=8?8:cnt>=5?5:cnt>=3?3:0;
-  const bonus = threshold===8?'+12% (Ядро сформировано)':threshold===5?'+8%':threshold===3?'+5%':'';
+  const cnt=sh.marbs.length;
+  const dom=shelfDom(sh);
+  const domCnt=cnt>0?sh.marbs.filter(m=>m.col===dom).length:0;
 
-  const el = document.createElement('div');
-  el.className = `shelf${G.sel?' drop':''}`;
-  if (G.sel) el.onclick = () => placeOnShelf(sh);
-
-  // Threshold bar (8 segs, marks at 3,5)
-  let tbar = '<div class="tbar"><span class="tlbl">0</span>';
-  for (let i=0;i<8;i++) {
-    if (i===3||i===5) tbar += '<span class="tmrk"></span>';
-    tbar += `<div class="tseg${i<cnt?' on':''}"></div>`;
+  let tbar='<div class="tbar"><span class="tlbl">0</span>';
+  for(let i=0;i<8;i++){
+    if(i===3||i===5) tbar+='<span class="tmrk"></span>';
+    tbar+=`<div class="tseg${i<cnt?' on':''}"></div>`;
   }
-  tbar += '<span class="tlbl">8</span></div>';
+  tbar+='<span class="tlbl">8→⬤</span></div>';
 
-  // Dominance bar
-  let dbar = '';
-  if (total > 0) {
-    const w = sh.marbs.filter(m=>m.col==='white').length + sh.cores.filter(c=>c.col==='white').length*8;
-    const b = sh.marbs.filter(m=>m.col==='black').length + sh.cores.filter(c=>c.col==='black').length*8;
-    const g = sh.marbs.filter(m=>m.col==='gray').length  + sh.cores.filter(c=>c.col==='gray').length*8;
-    const wp=Math.round(w/total*100), bp=Math.round(b/total*100), gp=100-wp-bp;
-    dbar = `<div class="dombar">
+  let dbar='';
+  if(cnt>0){
+    const w=sh.marbs.filter(m=>m.col==='white').length;
+    const b=sh.marbs.filter(m=>m.col==='black').length;
+    const g=sh.marbs.filter(m=>m.col==='gray').length;
+    const wp=Math.round(w/cnt*100),bp=Math.round(b/cnt*100),gp=100-wp-bp;
+    dbar=`<div class="dombar">
       ${w>0?`<div class="dbar white" style="width:${wp}%"></div>`:''}
       ${b>0?`<div class="dbar black" style="width:${bp}%"></div>`:''}
       ${g>0?`<div class="dbar gray"  style="width:${gp}%"></div>`:''}
     </div>`;
   }
 
-  el.innerHTML = `
+  const el=document.createElement('div');
+  el.className=`shelf${G.sel?' drop':''}`;
+  if(G.sel) el.onclick=()=>placeOnShelf(sh);
+
+  el.innerHTML=`
     <div class="shelf-hdr">
       <span class="shelf-name">${sh.name}</span>
-      <span class="shelf-cnt">${cnt} шар. + ${sh.cores.length} ядр. = ${total}</span>
+      <span class="shelf-cnt">${cnt}/${sh.max_slots}</span>
     </div>
     <div class="shelf-marbs" id="sm-${sh.id}"></div>
     ${tbar}
-    ${bonus ? `<div class="sbonus">▲ ${bonus}</div>` : ''}
-    ${sh.cores.length > 0 ? `<div class="spenalty">▼ −${sh.cores.length*3}% Адаптивности (${sh.cores.length} ${plurCore(sh.cores.length)})</div>` : ''}
+    ${cnt>=3?`<div class="sbonus">▲ +${domCnt}% (${COLORS[dom]})</div>`:''}
     ${dbar}
   `;
 
-  // Append marble elements
-  const mEl = el.querySelector(`#sm-${sh.id}`);
-  sh.marbs.forEach(m => {
-    const d = document.createElement('div');
-    d.className = `marble sm ${m.col}`;
-    d.title = COLORS[m.col];
+  const mEl=el.querySelector(`#sm-${sh.id}`);
+  sh.marbs.forEach(m=>{
+    const d=document.createElement('div');
+    d.className=`marble sm ${m.col}`;
+    d.title=COLORS[m.col];
     mEl.appendChild(d);
   });
-  sh.cores.forEach(c => {
-    const d = document.createElement('div');
-    d.className = `core ${c.col}`;
-    d.title = `Ядро (${COLORS[c.col]}) +12% −3% Адаптивности`;
-    mEl.appendChild(d);
-  });
-
   return el;
-}
-
-function plurCore(n) {
-  if (n===1) return 'ядро'; if (n<5) return 'ядра'; return 'ядер';
 }
 
 function placeOnShelf(sh) {
   if (!G.sel) return;
-  const idx = G.reserve.marbs.findIndex(m=>m.id===G.sel.id);
+  const idx=G.reserve.marbs.findIndex(m=>m.id===G.sel.id);
   if (idx===-1) return;
-
-  const m = G.reserve.marbs.splice(idx,1)[0];
+  if (sh.marbs.length>=sh.max_slots) { notify(`«${sh.name}» заполнена (${sh.max_slots}/${sh.max_slots}).`); return; }
+  const m=G.reserve.marbs.splice(idx,1)[0];
   sh.marbs.push({...m});
-  const placed = G.sel;
-  G.sel = null;
-
+  const placed=G.sel;
+  G.sel=null;
   notify(`${COLORS[placed.col].charAt(0).toUpperCase()+COLORS[placed.col].slice(1)} → ${sh.name}`, placed.col);
-
   checkThreshold(sh);
   recalcWorld();
   renderSanctuary();
@@ -852,241 +795,154 @@ function placeOnShelf(sh) {
 }
 
 function checkThreshold(sh) {
-  // Compress while >= 8 non-compressed marbles
-  while (sh.marbs.length >= 8) {
-    const dom = (() => {
-      const w=sh.marbs.filter(m=>m.col==='white').length;
-      const b=sh.marbs.filter(m=>m.col==='black').length;
-      const g=sh.marbs.filter(m=>m.col==='gray').length;
-      return w>=b&&w>=g?'white':b>=g?'black':'gray';
-    })();
+  while (sh.marbs.length>=8) {
+    const w=sh.marbs.filter(m=>m.col==='white').length;
+    const b=sh.marbs.filter(m=>m.col==='black').length;
+    const g=sh.marbs.filter(m=>m.col==='gray').length;
+    const dom=w>=b&&w>=g?'white':b>=g?'black':'gray';
 
-    // Remove 8 marbles, prioritise dominant
-    let rem = 0;
-    const keep = [];
-    // First pass: dominant
-    for (const m of sh.marbs) {
-      if (rem<8 && m.col===dom) rem++;
-      else keep.push(m);
-    }
-    // Second pass: if still need more
-    if (rem < 8) {
-      const extra = [];
-      let need = 8-rem;
-      for (const m of keep) {
-        if (need-->0) rem++;
-        else extra.push(m);
-      }
-      sh.marbs = extra;
+    let rem=0; const keep=[];
+    for(const m of sh.marbs){ if(rem<8&&m.col===dom) rem++; else keep.push(m); }
+    if(rem<8){ const extra=[]; let need=8-rem; for(const m of keep){ if(need-->0) rem++; else extra.push(m); } sh.marbs=extra; }
+    else sh.marbs=keep;
+
+    if(G.coreArchive.length<8){
+      G.coreArchive.push({col:dom, src:sh.id});
+      G.adapt=Math.max(0.5, 1.0-G.coreArchive.length*0.03);
+      unlockJournal(dom, true);
+      notify(`Компрессия! ${COLORS[dom].toUpperCase()} Ядро → Архив. +${dom==='white'?'белый':dom==='black'?'чёрный':'серый'}×8% карма / −3% Адаптивности`, dom);
     } else {
-      sh.marbs = keep;
+      notify('Архив Ядер полон (8/8). Посети Забвение.');
+      break;
     }
-
-    sh.cores.push({col:dom, shelf_id:sh.id});
-    G.totalCores++;
-    G.adapt = Math.max(0.5, 1.0 - G.totalCores*0.03);
-
-    unlockJournal(dom, sh.name, true);
-    notify(`Компрессия! ${COLORS[dom].toUpperCase()} Ядро — «${sh.name}». +12% / −3% Адаптивности`, dom);
-    return;
   }
-
-  const cnt = sh.marbs.length;
-  if (cnt===5) {
-    notify(`Порог 5 на «${sh.name}». +8% к стилю.`);
-    unlockJournal(shelfDom(sh), sh.name, false);
-  } else if (cnt===3) {
-    notify(`Порог 3 на «${sh.name}». +5% к стилю.`);
-    unlockJournal(shelfDom(sh), sh.name, false);
-  }
+  const cnt=sh.marbs.length;
+  if(cnt===5){ notify(`Порог 5 на «${sh.name}». +5% к ${COLORS[shelfDom(sh)]}.`); unlockJournal(shelfDom(sh),false); }
+  else if(cnt===3){ notify(`Порог 3 на «${sh.name}». +3% к ${COLORS[shelfDom(sh)]}.`); unlockJournal(shelfDom(sh),false); }
 }
 
-function unlockJournal(col, shelfName, isCore) {
-  const tmplId = isCore ? (col==='white'?'j_w2':col==='black'?'j_b2':'j_g')
-                        : (col==='white'?'j_w' :col==='black'?'j_b' :'j_g');
-  const tmpl = J_TEMPLATES.find(t=>t.id===tmplId);
-  if (!tmpl) return;
-  if (!G.journal.entries.find(e=>e.id===tmplId)) {
-    G.journal.entries.push({...tmpl, active:false});
-  }
+function unlockJournal(col, isCore) {
+  const id=isCore?(col==='white'?'j_w2':col==='black'?'j_b2':'j_g'):(col==='white'?'j_w':col==='black'?'j_b':'j_g');
+  const tmpl=J_TEMPLATES.find(t=>t.id===id);
+  if(tmpl&&!G.journal.entries.find(e=>e.id===id)) G.journal.entries.push({...tmpl,active:false});
 }
 
 function sellMarble() {
-  if (!G.sel) { notify('Выбери шарик из Резерва для продажи.'); return; }
-  const idx = G.reserve.marbs.findIndex(m=>m.id===G.sel.id);
-  if (idx===-1) { notify('Можно продавать только из Резерва.'); return; }
-  const m = G.reserve.marbs.splice(idx,1)[0];
-  const price = m.rare?8:5;
-  G.will += price;
-  G.sel = null;
-  notify(`Продан ${COLORS[m.col]} шарик за ${price} ОР.`);
-  renderSanctuary();
-  updateHUD();
+  if(!G.sel){ notify('Выбери шарик из Резерва для продажи.'); return; }
+  const idx=G.reserve.marbs.findIndex(m=>m.id===G.sel.id);
+  if(idx===-1){ notify('Можно продавать только из Резерва.'); return; }
+  const m=G.reserve.marbs.splice(idx,1)[0];
+  G.will+=m.rare?8:5;
+  G.sel=null;
+  notify(`Продан ${COLORS[m.col]} шарик за ${m.rare?8:5} ОР.`);
+  renderSanctuary(); updateHUD();
 }
 
-// ======================================================
-// WORLD
-// ======================================================
+// ===== WORLD =====
 function recalcWorld() {
-  const t = {white:0,black:0,gray:0};
-  G.shelves.forEach(sh=>{
-    sh.marbs.forEach(m=>t[m.col]++);
-    sh.cores.forEach(c=>t[c.col]+=8);
-  });
-  const mx = Math.max(t.white,t.black,t.gray);
-  G.world.dom = mx===0?null:t.white===mx?'white':t.black===mx?'black':'gray';
-}
-
-function shelfTotal(sh) {
-  return sh.marbs.length + sh.cores.length*8;
+  const t={white:0,black:0,gray:0};
+  G.shelves.forEach(sh=>sh.marbs.forEach(m=>t[m.col]++));
+  G.coreArchive.forEach(c=>t[c.col]+=8);
+  const mx=Math.max(t.white,t.black,t.gray);
+  G.world.dom=mx===0?null:t.white===mx?'white':t.black===mx?'black':'gray';
 }
 
 function shelfDom(sh) {
-  const w=sh.marbs.filter(m=>m.col==='white').length+sh.cores.filter(c=>c.col==='white').length*8;
-  const b=sh.marbs.filter(m=>m.col==='black').length+sh.cores.filter(c=>c.col==='black').length*8;
-  const g=sh.marbs.filter(m=>m.col==='gray').length +sh.cores.filter(c=>c.col==='gray').length*8;
+  const w=sh.marbs.filter(m=>m.col==='white').length;
+  const b=sh.marbs.filter(m=>m.col==='black').length;
+  const g=sh.marbs.filter(m=>m.col==='gray').length;
   return w>=b&&w>=g?'white':b>=g?'black':'gray';
 }
 
-// ======================================================
-// JOURNAL
-// ======================================================
+// ===== JOURNAL =====
 function renderJournal() {
-  // Slots
-  for (let i=0;i<2;i++) {
-    const slEl = document.getElementById(`sl${i}`);
-    const cEl = document.getElementById(`sl${i}c`);
-    const e = G.journal.slots[i];
-    if (e) {
-      slEl.className='aslot occ';
-      cEl.innerHTML=`<span class="ctag ${e.col}">${COLORS[e.col]}</span>
-        <div style="font-size:.82rem;color:var(--text)">${e.title}</div>
-        <div style="font-size:.68rem;color:var(--text-dim);font-style:italic">нажми чтобы убрать</div>`;
-    } else {
-      slEl.className='aslot';
-      cEl.innerHTML=`<div style="color:var(--text-dim);font-size:.76rem">— пусто —</div>`;
-    }
+  for(let i=0;i<2;i++){
+    const slEl=document.getElementById(`sl${i}`);
+    const cEl=document.getElementById(`sl${i}c`);
+    const e=G.journal.slots[i];
+    if(e){ slEl.className='aslot occ'; cEl.innerHTML=`<span class="ctag ${e.col}">${COLORS[e.col]}</span><div style="font-size:.82rem;color:var(--text)">${e.title}</div><div style="font-size:.66rem;color:var(--text-dim);font-style:italic">нажми чтобы убрать</div>`; }
+    else { slEl.className='aslot'; cEl.innerHTML=`<div style="color:var(--text-dim);font-size:.76rem">— пусто —</div>`; }
   }
-
-  // Entries
-  const jEl = document.getElementById('jentries');
+  const jEl=document.getElementById('jentries');
   jEl.innerHTML='';
-  if (G.journal.entries.length===0) {
-    jEl.innerHTML='<div style="color:var(--text-dim);font-style:italic;padding:20px">Дневник пуст. Достигни порога на полке.</div>';
-    return;
-  }
+  if(G.journal.entries.length===0){ jEl.innerHTML='<div style="color:var(--text-dim);font-style:italic;padding:20px">Дневник пуст. Достигни порога на полке.</div>'; return; }
   G.journal.entries.forEach(e=>{
     const d=document.createElement('div');
     d.className=`jentry${e.active?' act':''}`;
-    d.innerHTML=`
-      <div class="jeh"><div class="jdot ${e.col}"></div><div class="jtitle">${e.title}</div></div>
-      <div class="jtext">${e.text}</div>
-      <div class="jeff">→ ${e.eff}</div>
-      <div class="jtags">${e.tags.map(t=>`<span class="jtag">${t}</span>`).join('')}</div>`;
+    d.innerHTML=`<div class="jeh"><div class="jdot ${e.col}"></div><div class="jtitle">${e.title}</div></div><div class="jtext">${e.text}</div><div class="jeff">→ ${e.eff}</div><div class="jtags">${e.tags.map(t=>`<span class="jtag">${t}</span>`).join('')}</div>`;
     d.onclick=()=>toggleEntry(e);
     jEl.appendChild(d);
   });
 }
 
 function toggleEntry(e) {
-  if (e.active) {
-    const si = G.journal.slots.findIndex(s=>s?.id===e.id);
-    if (si!==-1) { G.journal.slots[si]=null; e.active=false; }
-  } else {
-    const si = G.journal.slots.findIndex(s=>s===null);
-    if (si===-1) { notify('Оба слота Внимания заняты. Убери одну запись.'); return; }
-    G.journal.slots[si]=e;
-    e.active=true;
-    notify(`«${e.title}» активирована для следующей экспедиции.`);
-  }
+  if(e.active){ const si=G.journal.slots.findIndex(s=>s?.id===e.id); if(si!==-1){ G.journal.slots[si]=null; e.active=false; } }
+  else { const si=G.journal.slots.findIndex(s=>s===null); if(si===-1){ notify('Оба слота заняты. Убери одну запись.'); return; } G.journal.slots[si]=e; e.active=true; notify(`«${e.title}» активирована.`); }
   renderJournal();
 }
 
 function clearSlot(i) {
   const e=G.journal.slots[i];
-  if (e) { e.active=false; G.journal.slots[i]=null; renderJournal(); }
+  if(e){ e.active=false; G.journal.slots[i]=null; renderJournal(); }
 }
 
-// ======================================================
-// OBLIVION
-// ======================================================
+// ===== OBLIVION =====
 function renderOblivion() {
-  document.getElementById('owp').textContent = G.will;
-  const all = [];
-  G.shelves.forEach(sh=>sh.cores.forEach(c=>all.push({c,sh})));
-  document.getElementById('ono').style.display = all.length===0?'block':'none';
-  const el = document.getElementById('ocores');
-  el.innerHTML = '';
-  all.forEach(({c,sh})=>{
+  document.getElementById('owp').textContent=G.will;
+  document.getElementById('ono').style.display=G.coreArchive.length===0?'block':'none';
+  const el=document.getElementById('ocores');
+  el.innerHTML='';
+  G.coreArchive.forEach(c=>{
+    const sh=G.shelves.find(s=>s.id===c.src);
     const d=document.createElement('div');
     d.className='ocore';
-    d.innerHTML=`<div class="core ${c.col}"></div>
-      <div>${COLORS[c.col]}</div>
-      <div style="color:var(--text-dim);font-size:.68rem">${sh.name}</div>
-      <div style="font-size:.68rem;margin-top:3px">10 ОР</div>`;
-    d.onclick=()=>dissolve(c,sh);
+    d.innerHTML=`<div class="core lg ${c.col}"></div><div>${COLORS[c.col]}</div><div style="color:var(--text-dim);font-size:.68rem">${sh?.name||'?'}</div><div style="font-size:.68rem;margin-top:3px">10 ОР</div>`;
+    d.onclick=()=>dissolve(c);
     el.appendChild(d);
   });
 }
 
-function dissolve(c, sh) {
-  if (G.will<10) { notify('Недостаточно ОР. Нужно 10.'); return; }
-  const ci = sh.cores.findIndex(x=>x===c);
-  if (ci===-1) return;
-  G.will -= 10;
-  sh.cores.splice(ci,1);
-  G.totalCores--;
-  G.adapt = Math.max(0.5, 1.0 - G.totalCores*0.03);
-
-  const ret = 2+Math.floor(Math.random()*2);
-  const space = G.reserve.cap - G.reserve.marbs.length;
-  const actual = Math.min(ret, space);
-  for (let i=0;i<actual;i++) G.reserve.marbs.push(mk(c.col,'dissolution'));
-
+function dissolve(c) {
+  if(G.will<10){ notify('Недостаточно ОР. Нужно 10.'); return; }
+  const ci=G.coreArchive.findIndex(x=>x===c);
+  if(ci===-1) return;
+  G.will-=10;
+  G.coreArchive.splice(ci,1);
+  G.adapt=Math.max(0.5, 1.0-G.coreArchive.length*0.03);
+  const actual=Math.min(2+Math.floor(Math.random()*2), G.reserve.cap-G.reserve.marbs.length);
+  for(let i=0;i<actual;i++) G.reserve.marbs.push(mk(c.col,'dissolution'));
   notify(`Ядро растворено. +${actual} ${COLORS[c.col]} в Резерв. Адаптивность восстановлена.`, c.col);
-  renderOblivion();
-  updateHUD();
+  renderOblivion(); updateHUD();
 }
 
-// ======================================================
-// HUD
-// ======================================================
+// ===== HUD =====
 function updateHUD() {
-  const ap = Math.round(G.adapt*100);
-  document.getElementById('ha').style.width = ap+'%';
-  document.getElementById('ha').style.background = ap>=80?'var(--accent)':ap>=60?'#a07830':'#904040';
-  document.getElementById('hav').textContent = ap+'%';
-
-  const rdots = document.getElementById('hrd');
-  rdots.innerHTML = '';
-  for (let i=0;i<10;i++) {
-    const d=document.createElement('div');
-    const m=G.reserve.marbs[i];
-    d.className=`rdot${m?' '+m.col[0]:''}`;
-    rdots.appendChild(d);
-  }
-  document.getElementById('hrc').textContent = `${G.reserve.marbs.length}/10`;
-  document.getElementById('hco').textContent = G.totalCores;
-  document.getElementById('hor').textContent = G.will;
+  const ap=Math.round(G.adapt*100);
+  document.getElementById('ha').style.width=ap+'%';
+  document.getElementById('ha').style.background=ap>=80?'var(--accent)':ap>=60?'#a07830':'#904040';
+  document.getElementById('hav').textContent=ap+'%';
+  const rdots=document.getElementById('hrd');
+  rdots.innerHTML='';
+  for(let i=0;i<10;i++){ const d=document.createElement('div'); const m=G.reserve.marbs[i]; d.className=`rdot${m?' '+m.col[0]:''}`;rdots.appendChild(d); }
+  document.getElementById('hrc').textContent=`${G.reserve.marbs.length}/10`;
+  document.getElementById('hco').textContent=G.coreArchive.length;
+  document.getElementById('hor').textContent=G.will;
 }
 
-// ======================================================
-// UTILS
-// ======================================================
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const el = document.getElementById(id);
+  const el=document.getElementById(id);
   el.classList.add('active','fi');
   setTimeout(()=>el.classList.remove('fi'),450);
 }
 
 function notify(txt, col) {
-  const el = document.getElementById('notif');
-  el.textContent = txt;
-  el.style.borderColor = col==='white'?'rgba(200,185,165,.6)':col==='black'?'rgba(90,70,150,.6)':col==='gray'?'rgba(95,125,145,.6)':'rgba(201,169,110,.35)';
+  const el=document.getElementById('notif');
+  el.textContent=txt;
+  el.style.borderColor=col==='white'?'rgba(200,185,165,.6)':col==='black'?'rgba(90,70,150,.6)':col==='gray'?'rgba(95,125,145,.6)':'rgba(201,169,110,.35)';
   el.classList.add('show');
   clearTimeout(notifTm);
-  notifTm = setTimeout(()=>el.classList.remove('show'), 2800);
+  notifTm=setTimeout(()=>el.classList.remove('show'),2800);
 }
 </script>
 </body>
