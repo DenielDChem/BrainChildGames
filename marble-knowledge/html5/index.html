@@ -239,12 +239,6 @@ button:disabled{opacity:.3;cursor:not-allowed;pointer-events:none}
       <div style="font-size:.66rem;color:var(--text-dim);margin-top:5px;text-align:center">Только из Резерва</div>
     </div>
     <div class="shelves" id="shelves"></div>
-    <div class="cpanel">
-      <h3>Архив Ядер <span id="coarc-cnt">0/8</span></h3>
-      <div class="coarc" id="coarc"></div>
-      <div id="coarc-stats"></div>
-      <div style="font-size:.64rem;color:var(--text-dim);margin-top:8px;font-style:italic;line-height:1.5">Ядро = 8 шаров<br>−3% Адаптивности каждое</div>
-    </div>
   </div>
   <div class="btn-row">
     <button onclick="goExpedition()">→ Экспедиция</button>
@@ -366,11 +360,10 @@ function initState() {
   G = {
     reserve:{ cap:10, marbs:[] },
     shelves:[
-      {id:'s0', name:'Боевая стойка', marbs:[], max_slots:10},
-      {id:'s1', name:'Тень',          marbs:[], max_slots:10},
-      {id:'s2', name:'Переговоры',    marbs:[], max_slots:10},
+      {id:'s0', name:'Боевая стойка', marbs:[], cores:[], max_slots:10},
+      {id:'s1', name:'Тень',          marbs:[], cores:[], max_slots:10},
+      {id:'s2', name:'Переговоры',    marbs:[], cores:[], max_slots:10},
     ],
-    coreArchive:[],
     adapt:1.0,
     will:30,
     journal:{ entries:[], slots:[null,null] },
@@ -449,10 +442,12 @@ function rotateAction(idx) {
   if (candidates.length > 0) G.curActs[idx] = candidates[Math.floor(Math.random()*candidates.length)];
 }
 
+function allCores() { return G.shelves.flatMap(sh=>sh.cores); }
+
 function successChance(col) {
   let n = 0;
   G.shelves.forEach(sh => n += sh.marbs.filter(m=>m.col===col).length);
-  n += G.coreArchive.filter(c=>c.col===col).length * 8;
+  n += allCores().filter(c=>c.col===col).length * 8;
   return Math.min(0.92, 0.45 * G.adapt + n*0.05);
 }
 
@@ -589,9 +584,9 @@ function renderCombatBonuses() {
     const dom=w===mx?'white':b===mx?'black':'gray';
     el.innerHTML+=`<span class="btag">${sh.name} +${mx}% (${COLORS[dom]})</span>`;
   });
-  const cw=G.coreArchive.filter(c=>c.col==='white').length*8;
-  const cb=G.coreArchive.filter(c=>c.col==='black').length*8;
-  const cg=G.coreArchive.filter(c=>c.col==='gray').length*8;
+  const cw=allCores().filter(c=>c.col==='white').length*8;
+  const cb=allCores().filter(c=>c.col==='black').length*8;
+  const cg=allCores().filter(c=>c.col==='gray').length*8;
   if (cw>0) el.innerHTML+=`<span class="btag">Ядра +${cw}% (белый)</span>`;
   if (cb>0) el.innerHTML+=`<span class="btag">Ядра +${cb}% (чёрный)</span>`;
   if (cg>0) el.innerHTML+=`<span class="btag">Ядра +${cg}% (серый)</span>`;
@@ -608,7 +603,7 @@ function doFight(col) {
     const n=sh.marbs.filter(m=>m.col===col).length;
     if (n>0) atk=Math.round(atk*(1+n/100));
   });
-  const coreN = G.coreArchive.filter(c=>c.col===col).length*8;
+  const coreN = allCores().filter(c=>c.col===col).length*8;
   if (coreN>0) atk=Math.round(atk*(1+coreN/100));
   G.journal.slots.forEach(je=>{ if(je?.col===col) atk=Math.round(atk*1.05); });
   atk = Math.round(atk*G.adapt);
@@ -663,7 +658,7 @@ function endCombat(won) {
 function dominantAll() {
   const t={white:0,black:0,gray:0};
   G.shelves.forEach(sh=>sh.marbs.forEach(m=>t[m.col]++));
-  G.coreArchive.forEach(c=>t[c.col]+=8);
+  allCores().forEach(c=>t[c.col]+=8);
   G.reserve.marbs.forEach(m=>t[m.col]++);
   const mx=Math.max(t.white,t.black,t.gray);
   if (mx===0) return ['white','black','gray'][Math.floor(Math.random()*3)];
@@ -685,31 +680,9 @@ function renderSanctuary() {
   const sEl=document.getElementById('shelves');
   sEl.innerHTML='';
   G.shelves.forEach(sh=>sEl.appendChild(buildShelf(sh)));
-  renderCoreArchive();
   updateHint();
 }
 
-function renderCoreArchive() {
-  document.getElementById('coarc-cnt').textContent=`${G.coreArchive.length}/8`;
-  const el=document.getElementById('coarc');
-  el.innerHTML='';
-  if (G.coreArchive.length===0) {
-    el.innerHTML='<div style="color:var(--text-dim);font-size:.74rem;text-align:center;padding:10px">пусто</div>';
-  } else {
-    G.coreArchive.forEach(c=>{
-      const d=document.createElement('div');
-      d.className=`core sm ${c.col}`;
-      d.title=`${COLORS[c.col]} Ядро (из «${G.shelves.find(s=>s.id===c.src)?.name||'?'}») +8%`;
-      el.appendChild(d);
-    });
-  }
-  const stats=document.getElementById('coarc-stats');
-  stats.innerHTML='';
-  const t={white:0,black:0,gray:0};
-  G.coreArchive.forEach(c=>t[c.col]++);
-  Object.entries(t).forEach(([col,cnt])=>{ if(cnt>0) stats.innerHTML+=`<div class="cstat ${col}">+${cnt*8}% (${COLORS[col]})</div>`; });
-  if (G.coreArchive.length>0) stats.innerHTML+=`<div class="cstat penalty">−${G.coreArchive.length*3}% Адапт.</div>`;
-}
 
 function selectMarb(m) {
   G.sel = G.sel?.id===m.id?null:m;
@@ -729,9 +702,9 @@ function updateHint() {
 }
 
 function buildShelf(sh) {
-  const cnt=sh.marbs.length;
+  const cnt=sh.marbs.length+sh.cores.length;
   const dom=shelfDom(sh);
-  const domCnt=cnt>0?sh.marbs.filter(m=>m.col===dom).length:0;
+  const domCnt=sh.marbs.length>0?sh.marbs.filter(m=>m.col===dom).length:0;
 
   let tbar='<div class="tbar"><span class="tlbl">0</span>';
   for(let i=0;i<8;i++){
@@ -775,6 +748,12 @@ function buildShelf(sh) {
     d.title=COLORS[m.col];
     mEl.appendChild(d);
   });
+  sh.cores.forEach(c=>{
+    const d=document.createElement('div');
+    d.className=`core sm ${c.col}`;
+    d.title=`Ядро (${COLORS[c.col]})`;
+    mEl.appendChild(d);
+  });
   return el;
 }
 
@@ -782,7 +761,7 @@ function placeOnShelf(sh) {
   if (!G.sel) return;
   const idx=G.reserve.marbs.findIndex(m=>m.id===G.sel.id);
   if (idx===-1) return;
-  if (sh.marbs.length>=sh.max_slots) { notify(`«${sh.name}» заполнена (${sh.max_slots}/${sh.max_slots}).`); return; }
+  if (sh.marbs.length+sh.cores.length>=sh.max_slots) { notify(`«${sh.name}» заполнена (${sh.max_slots}/${sh.max_slots}).`); return; }
   const m=G.reserve.marbs.splice(idx,1)[0];
   sh.marbs.push({...m});
   const placed=G.sel;
@@ -806,15 +785,10 @@ function checkThreshold(sh) {
     if(rem<8){ const extra=[]; let need=8-rem; for(const m of keep){ if(need-->0) rem++; else extra.push(m); } sh.marbs=extra; }
     else sh.marbs=keep;
 
-    if(G.coreArchive.length<8){
-      G.coreArchive.push({col:dom, src:sh.id});
-      G.adapt=Math.max(0.5, 1.0-G.coreArchive.length*0.03);
-      unlockJournal(dom, true);
-      notify(`Компрессия! ${COLORS[dom].toUpperCase()} Ядро → Архив. +${dom==='white'?'белый':dom==='black'?'чёрный':'серый'}×8% карма / −3% Адаптивности`, dom);
-    } else {
-      notify('Архив Ядер полон (8/8). Посети Забвение.');
-      break;
-    }
+    sh.cores.push({col:dom, src:sh.id, id:'c'+uid++});
+    G.adapt=Math.max(0.5, 1.0-allCores().length*0.03);
+    unlockJournal(dom, true);
+    notify(`Компрессия! ${COLORS[dom].toUpperCase()} Ядро — осталось на «${sh.name}». −3% Адаптивности`, dom);
   }
   const cnt=sh.marbs.length;
   if(cnt===5){ notify(`Порог 5 на «${sh.name}». +5% к ${COLORS[shelfDom(sh)]}.`); unlockJournal(shelfDom(sh),false); }
@@ -842,7 +816,7 @@ function sellMarble() {
 function recalcWorld() {
   const t={white:0,black:0,gray:0};
   G.shelves.forEach(sh=>sh.marbs.forEach(m=>t[m.col]++));
-  G.coreArchive.forEach(c=>t[c.col]+=8);
+  allCores().forEach(c=>t[c.col]+=8);
   const mx=Math.max(t.white,t.black,t.gray);
   G.world.dom=mx===0?null:t.white===mx?'white':t.black===mx?'black':'gray';
 }
@@ -889,10 +863,11 @@ function clearSlot(i) {
 // ===== OBLIVION =====
 function renderOblivion() {
   document.getElementById('owp').textContent=G.will;
-  document.getElementById('ono').style.display=G.coreArchive.length===0?'block':'none';
+  const cores=allCores();
+  document.getElementById('ono').style.display=cores.length===0?'block':'none';
   const el=document.getElementById('ocores');
   el.innerHTML='';
-  G.coreArchive.forEach(c=>{
+  cores.forEach(c=>{
     const sh=G.shelves.find(s=>s.id===c.src);
     const d=document.createElement('div');
     d.className='ocore';
@@ -904,11 +879,13 @@ function renderOblivion() {
 
 function dissolve(c) {
   if(G.will<10){ notify('Недостаточно ОР. Нужно 10.'); return; }
-  const ci=G.coreArchive.findIndex(x=>x===c);
+  const sh=G.shelves.find(s=>s.id===c.src);
+  if(!sh) return;
+  const ci=sh.cores.findIndex(x=>x===c);
   if(ci===-1) return;
   G.will-=10;
-  G.coreArchive.splice(ci,1);
-  G.adapt=Math.max(0.5, 1.0-G.coreArchive.length*0.03);
+  sh.cores.splice(ci,1);
+  G.adapt=Math.max(0.5, 1.0-allCores().length*0.03);
   const actual=Math.min(2+Math.floor(Math.random()*2), G.reserve.cap-G.reserve.marbs.length);
   for(let i=0;i<actual;i++) G.reserve.marbs.push(mk(c.col,'dissolution'));
   notify(`Ядро растворено. +${actual} ${COLORS[c.col]} в Резерв. Адаптивность восстановлена.`, c.col);
@@ -925,7 +902,7 @@ function updateHUD() {
   rdots.innerHTML='';
   for(let i=0;i<10;i++){ const d=document.createElement('div'); const m=G.reserve.marbs[i]; d.className=`rdot${m?' '+m.col[0]:''}`;rdots.appendChild(d); }
   document.getElementById('hrc').textContent=`${G.reserve.marbs.length}/10`;
-  document.getElementById('hco').textContent=G.coreArchive.length;
+  document.getElementById('hco').textContent=allCores().length;
   document.getElementById('hor').textContent=G.will;
 }
 
