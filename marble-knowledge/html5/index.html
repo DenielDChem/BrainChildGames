@@ -453,7 +453,7 @@ function successChance(col) {
   let n = 0;
   G.shelves.forEach(sh => n += sh.marbs.filter(m=>m.col===col).length);
   n += G.coreArchive.filter(c=>c.col===col).length * 8;
-  return Math.min(0.92, 0.45 + n*0.05);
+  return Math.min(0.92, 0.45 * G.adapt + n*0.05);
 }
 
 // ===== EXPEDITION =====
