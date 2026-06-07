@@ -17,3 +17,8 @@ Thumbs.db
 *.apk
 *.aab
 *.ipa
+.env
+.env.*
+*.key
+*.pem
+*.credentials.json
