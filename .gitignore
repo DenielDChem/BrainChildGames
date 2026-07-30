@@ -22,3 +22,6 @@ Thumbs.db
 *.key
 *.pem
 *.credentials.json
+
+# Служебный журнал инструментария (append-only, читателя нет)
+.claude-flow/
